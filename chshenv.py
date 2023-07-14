@@ -1,14 +1,20 @@
 from typing import Tuple, Dict, Union
 import itertools
+import warnings
 
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from qiskit import QuantumCircuit, transpile
-from qiskit.circuit import ParameterVector
-from qiskit.circuit.library import PauliEvolutionGate
-from qiskit.opflow import I, X, Y, Z
-from qiskit_aer import AerSimulator, StatevectorSimulator
+
+# Please shut up qiskit, it's not my fault you're using your own deprecated code.
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+    from qiskit import QuantumCircuit, transpile
+    from qiskit.circuit import ParameterVector
+    from qiskit.circuit.library import PauliEvolutionGate
+    from qiskit.quantum_info import Pauli
+    from qiskit_aer import AerSimulator, StatevectorSimulator
 
 ObsType = np.ndarray
 InfoType = dict
@@ -74,10 +80,13 @@ class CHSHEnv(gym.Env):
         
         obs, info = self._get_obs()
         reward = self._measure()
+        info['win_rate'] = reward
 
         self.iter += 1
         # Episode ends when all parameters have been set
         done = self.iter == (len(self.state_params) + len(self.measurement_params))
+        if done:
+            info['final_win_rate'] = reward
 
         return obs, reward, done, False, info
     
@@ -135,7 +144,7 @@ class CHSHEnv(gym.Env):
         if ansatz == 'adapt':
             # Add 1 parameter for our state exp(-itYX)|00>
             params.resize(len(params) + 1)
-            op = PauliEvolutionGate(Y ^ X, params[0])
+            op = PauliEvolutionGate(Pauli('YX'), params[0])
             qc.append(op, range(self.players))
         
         elif ansatz == 'arxiv':
