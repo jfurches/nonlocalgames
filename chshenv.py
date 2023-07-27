@@ -1,4 +1,5 @@
 from typing import Tuple, Dict, Union
+from copy import deepcopy
 import itertools
 import warnings
 
@@ -45,7 +46,7 @@ class CHSHEnv(gym.Env):
     def __init__(self, config: dict, **kwargs):
         super().__init__(**kwargs)
 
-        config = self.default_config | config
+        config = deepcopy(self.default_config) | config
 
         self.iter = 0
 
@@ -85,6 +86,7 @@ class CHSHEnv(gym.Env):
         self.iter += 1
         # Episode ends when all parameters have been set
         done = self.iter == (len(self.state_params) + len(self.measurement_params))
+        reward *= float(done)
         if done:
             info['final_win_rate'] = reward
 
