@@ -2,7 +2,7 @@ import warnings
 import pytest
 
 import numpy as np
-from scipy.sparse import csc_matrix, SparseEfficiencyWarning
+from scipy.sparse import SparseEfficiencyWarning
 from scipy.linalg import eigvalsh
 
 from hamiltonians import CHSHHamiltonian, NPartiteSymmetricNLG
