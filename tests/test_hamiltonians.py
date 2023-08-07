@@ -5,8 +5,8 @@ import numpy as np
 from scipy.sparse import SparseEfficiencyWarning
 from scipy.linalg import eigvalsh
 
-from hamiltonians import CHSHHamiltonian, NPartiteSymmetricNLG
-from qinfo import (
+from nonlocalgames.hamiltonians import CHSHHamiltonian, NPartiteSymmetricNLG
+from nonlocalgames.qinfo import (
     is_hermitian, is_diagonal, 
     commutator, is_antihermitian
 )

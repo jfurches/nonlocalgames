@@ -1,5 +1,5 @@
 import functools
-from typing import Union
+from typing import Union, Sequence
 
 import numpy as np
 from scipy.sparse import csc_matrix
@@ -30,9 +30,33 @@ def tensor_i(A: ArrayType, i: int, N: int) -> ArrayType:
     Assumes each operator acts on 1 qubit
     '''
 
+    return tensor([A], (i,), N)
+
+def tensor(A: Sequence[ArrayType], indices: Sequence[int], N: int) -> ArrayType:
+    '''Computes general tensor product for multiple operators
+    
+    Args:
+        A: List of operators to tensor together
+        indices: Index of operator A[i] in the system subspace. For any operator
+            not listed, it is assumed to be an identity. We assume these indices are
+            sorted in ascending order
+        N: Size of the system
+
+    Ex:
+        `tensor((Ry, Ry), (1, 2), 3)` is equivalent to I ⊗ Ry ⊗ Ry since operator 0
+        is not specified.
+    '''
+
+    ops = []
+    for i in range(N):
+        if i in indices:
+            ops.append(A[indices.index(i)])
+        else:
+            ops.append(I)
+    
     return functools.reduce(
-        lambda x, y: np.kron(x,y),
-        (A if j == i else I for j in range(N))
+        lambda x, y: np.kron(x, y),
+        ops
     )
 
 def commutator(A: ArrayType, B: ArrayType) -> ArrayType:

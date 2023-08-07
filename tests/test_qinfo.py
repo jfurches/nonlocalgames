@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from qinfo import *
+from nonlocalgames.qinfo import *
 
 class TestCheckFunctions:
     def test_hermicity(self):
