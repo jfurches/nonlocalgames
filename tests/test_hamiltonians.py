@@ -14,7 +14,7 @@ from nonlocalgames.qinfo import (
 class TestHamiltonians:
     @pytest.mark.parametrize('mode', ['optimal', 'normal'])
     def test_chsh(self, mode: str):
-        ham = CHSHHamiltonian(initialize_mode=mode)
+        ham = CHSHHamiltonian(init_mode=mode)
         ham.init()
 
         assert is_hermitian(ham.mat)
@@ -24,6 +24,19 @@ class TestHamiltonians:
             w = eigvalsh(ham.mat)
             min_eigval = min(w.real)
             assert np.isclose(min_eigval, -2*np.sqrt(2))
+        elif mode == 'normal':
+            # Check that seeding produces the same hamiltonian
+            ham.init(seed=42)
+            mat1 = ham.mat
+            params1 = ham.params
+
+            ham = CHSHHamiltonian(init_mode=mode)
+            ham.init(seed=42)
+            mat2 = ham.mat
+            params2 = ham.params
+
+            assert np.allclose(mat1, mat2, rtol=0)
+            assert np.allclose(params1, params2, rtol=0)
 
     @pytest.mark.parametrize('n', [2,3,4,5])
     def test_Npartite(self, n: int, trials=5):
