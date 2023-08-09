@@ -7,7 +7,8 @@ from gymnasium.spaces import Box
 
 from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import ParameterVector
-from qiskit_aer import StatevectorSimulator
+from qiskit_aer import AerSimulator
+from qiskit_aer.library import SaveStatevector
 
 from adaptgym.hamiltonians import Hamiltonian
 
@@ -38,7 +39,7 @@ class NPSEnv(gym.Env):
         self._config = config
         self._validate_config()
 
-        self._sim = StatevectorSimulator()
+        self._sim = AerSimulator(method='statevector')
         self._qc, self._theta = self._create_ansatz()
         self._ham, self._phi = self._create_hamiltonian()
 
@@ -118,6 +119,7 @@ class NPSEnv(gym.Env):
             for i in range(players):
                 qc.cx(i, (i + 1) % players)
         
+        qc.append(SaveStatevector(players), qargs=range(players))
         qc = transpile(qc, self._sim)
         return qc, params
     
@@ -140,7 +142,7 @@ class NPSEnv(gym.Env):
         result = job.result()
 
         # Get ket and bra as numpy array from statevector simulator
-        ket: np.ndarray = result.get_statevector().reshape(-1, 1)
+        ket: np.ndarray = np.asarray(result.get_statevector()).reshape(-1, 1)
         bra = ket.T.conj()
         
         # Regenerate the hamiltonian based on the parameters chosen
