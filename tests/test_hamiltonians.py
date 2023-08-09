@@ -5,7 +5,12 @@ import numpy as np
 from scipy.sparse import SparseEfficiencyWarning
 from scipy.linalg import eigvalsh
 
-from nonlocalgames.hamiltonians import CHSHHamiltonian, NPartiteSymmetricNLG
+from nonlocalgames.hamiltonians import (
+    CHSHHamiltonian,
+    NPartiteSymmetricNLG,
+    G14
+)
+
 from nonlocalgames.qinfo import (
     is_hermitian, is_diagonal, 
     commutator, is_antihermitian
@@ -84,3 +89,14 @@ class TestHamiltonians:
                 # Make sure some operator has nonzero gradient since the 
                 # probability we chose optimal parameters is 0
                 assert not np.allclose(grads, 0)
+
+    def test_g14_graph(self):
+        graph = G14._get_graph()
+
+        assert graph.nodes.shape[0] == 14
+        assert graph.edge_links.min() == 0
+        assert graph.edge_links.max() == 13
+
+        # Check apex vertex
+        for v in range(13):
+            assert (13, v) in graph.edge_links
