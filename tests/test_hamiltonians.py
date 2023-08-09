@@ -1,4 +1,5 @@
 import warnings
+import itertools
 import pytest
 
 import numpy as np
@@ -90,6 +91,8 @@ class TestHamiltonians:
                 # probability we chose optimal parameters is 0
                 assert not np.allclose(grads, 0)
 
+
+class TestG14:
     def test_g14_graph(self):
         graph = G14._get_graph()
 
@@ -100,3 +103,33 @@ class TestHamiltonians:
         # Check apex vertex
         for v in range(13):
             assert (13, v) in graph.edge_links
+
+    def test_g14_pcc(self):
+        pcc = G14._pcc(4)
+        assert pcc.nnz == 4
+
+        for c1, c2 in itertools.product(range(G14.chi_q), repeat=2):
+            v1 = np.zeros(4)
+            v2 = np.zeros(4)
+            v1[c1] = 1
+            v2[c2] = 1
+
+            psi = np.kron(v1, v2)
+
+            if c1 == c2:
+                assert np.allclose(pcc @ psi, psi, rtol=0)
+            else:
+                assert np.allclose(pcc @ psi, 0, rtol=0)
+    
+    def test_g14(self):
+        ham = G14(init_mode='normal')
+        ham.init(seed=42)
+        mat1 = ham.mat
+
+        ham = G14(init_mode='normal')
+        ham.init(seed=42)
+        mat2 = ham.mat
+
+        assert np.allclose(mat1, mat2)
+        assert mat1.shape == (16, 16)
+        assert is_hermitian(mat1)

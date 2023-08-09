@@ -21,7 +21,7 @@ class NLGHamiltonian(Hamiltonian):
         self._np_random = None
 
     @abstractmethod
-    def _generate_hamiltonian(self, seed: int | None = None) -> csc_matrix:
+    def _generate_hamiltonian(self) -> csc_matrix:
         ...
 
     @abstractmethod
