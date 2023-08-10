@@ -62,10 +62,10 @@ def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
                 # print('Optim:', info['optim_success'])
                 print('Added gate',
                       ham.pool.get_operators()[shared_state.pool_idx[0]],
-                      shared_state.curr_params[0])
+                      shared_state.params[0])
                 print()
 
-        theta = shared_state.curr_params
+        theta = shared_state.params
 
         if verbose >= 2:
             print('Theta:', theta)
@@ -122,7 +122,7 @@ def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
         ineq_values.append(new_ineq_value)
     
     ansatz_obj: List[Tuple[float, SymbolicOperator]] = []
-    for pool_idx, theta in zip(shared_state.pool_idx, shared_state.curr_params):
+    for pool_idx, theta in zip(shared_state.pool_idx, shared_state.params):
         gate = ham.pool.get_operators()[pool_idx]
         ansatz_obj.append((theta, str(gate)))
 
