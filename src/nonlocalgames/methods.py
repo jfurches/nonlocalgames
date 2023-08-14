@@ -121,6 +121,8 @@ def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
 
         ineq_values.append(new_ineq_value)
     
+    # Fixme: this saves in reversed order, we should have a reverse call
+    # so that we can deserialize and just append to a qiskit circuit easier
     ansatz_obj: List[Tuple[float, SymbolicOperator]] = []
     for pool_idx, theta in zip(shared_state.pool_idx, shared_state.params):
         gate = ham.pool.get_operators()[pool_idx]

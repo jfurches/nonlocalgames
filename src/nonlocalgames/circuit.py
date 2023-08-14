@@ -1,0 +1,186 @@
+from dataclasses import dataclass, field
+from typing import Sequence, Tuple
+from functools import cached_property, partial, reduce
+from string import ascii_lowercase
+
+import numpy as np
+
+from qiskit import (
+    QuantumCircuit,
+    QuantumRegister,
+    ClassicalRegister,
+    transpile
+)
+from qiskit.quantum_info import Pauli
+from qiskit.circuit import ParameterVector, Parameter
+from qiskit.circuit.library import PauliEvolutionGate
+from qiskit_aer import AerSimulator
+
+from openfermion import QubitOperator
+from adaptgym.util import circuit
+
+@dataclass
+class NLGCircuit:
+    '''Utility class to play non-local games from a quantum circuit
+    
+    First construct the circuit from a shared quantum state and set of measurements,
+
+    >>> NLGCircuit(shared_state, phi)
+
+    where `phi` is a numpy array of shape (players, questions, [qubits=1]). If qubits is not
+    specified, it defaults to 1. It infers the number of players from `shared_state.qregs` and
+    maps each qubit register to a classical register with the same number of bits. These registers
+    can be accessed through `NLGCircuit.qregs` and `NLGCircuit.cregs`. `shared_state` should already
+    have its parameters (theta) bound since those don't depend on the question.
+
+    This class then adds a measurement layer consisting of Ry rotations per qubit and binds the
+    appropriate parameters (phi) depending on the question when asked.
+
+    Example (from G14):
+        >>> shared_state, phi = load_adapt_ansatz(...)
+        >>> nlg = NLGCircuit(shared_state, phi, sim=AerSimulator())
+        >>> nlg.ask((1, 1), shots=1024)
+        ... {(1, 1): 28,
+            (0, 0): 43,
+            (1, 0): 88,
+            (1, 3): 15,
+            (0, 2): 5,
+            (0, 3): 42,
+            (1, 2): 170,
+            (0, 1): 633}
+    '''
+    shared_state: QuantumCircuit
+
+    # Array of shape (players, questions, [qubits_per_player = 1])
+    phi: np.ndarray
+
+    sim: AerSimulator = field(default=None, kw_only=True)
+
+    # Layer of rotation gates at the end that we'll construct
+    measurement_params: ParameterVector = field(default=None, init=False)
+    qc: QuantumCircuit = field(default=None, init=False)
+
+    def __post_init__(self):
+        self.qc = self.shared_state.copy()
+
+        if self.phi.ndim == 2:
+            self.phi = np.expand_dims(self.phi, axis=2)
+        
+        players, questions, qubits = self.phi.shape
+        n_phi_params = players * qubits
+        self.measurement_params = ParameterVector('φ', length=n_phi_params)
+
+        # Add classical bit registers for each quantum register
+        for qreg in self.qregs:
+            creg = ClassicalRegister(qreg.size, 'c' + qreg.name)
+            self.qc.add_register(creg)
+
+        i = 0
+        # Construct measurement layer onto circuit
+        # Iterate over players, each has their own qreg and creg
+        for qreg, creg in zip(self.qregs, self.cregs):
+            # Iterate over qubits in each register
+            for _, qubit in enumerate(qreg):
+                # Add y rotations that the players choose based on
+                # the question they receive
+                self.qc.ry(self.measurement_params[i], qubit)
+                i += 1
+            
+            # Add measurement
+            self.qc.measure(qreg, creg)
+        
+    def ask(self, q: Sequence[int], **run_options):
+        '''Query the players with a vector of n questions.
+        
+        Args:
+            q: Sequence of questions for each player
+            run_options: Keyword arguments passed to AerSimulator.run
+        
+        Returns:
+            A dict of counts with the keys being a tuple of each player's response, e.g.
+                `{(a1, a2, ..., an): count}`.
+        '''
+
+        phi = np.concatenate([self.phi[i, qi] for i, qi in enumerate(q)])
+        eval_qc = self.transpiled.bind_parameters({self.measurement_params: phi})
+
+        job = self.sim.run(eval_qc, **run_options)
+        counts = job.result().get_counts()
+
+        postprocessed = {}
+        from_bin = partial(int, base=2)
+        for bitstring, count in counts.items():
+            # Transform the binary strings back into integers per player.
+            # Qiskit will output a bit string in the format
+            # 'bn bn-1 ... b0', where bi is the bit string for classical register i
+            # (self.cregs[i]). Additionally, the bits are reversed, i.e. in little endian order
+            # with the MSB on the left.
+            answers = tuple(map(from_bin, reversed(bitstring.split(' '))))
+            postprocessed[answers] = count
+        
+        return postprocessed
+
+    @cached_property
+    def transpiled(self):
+        '''Returns the quantum circuit transpiled for the simulator'''
+
+        if self.sim is None:
+            raise RuntimeError('Simulator must not be None')
+    
+        return transpile(self.qc, backend=self.sim)
+    
+    @property
+    def qregs(self):
+        '''The qubit registers for each player'''
+        return self.qc.qregs
+
+    @property
+    def cregs(self):
+        '''The classical registers for each player'''
+        return self.qc.cregs
+
+
+def load_adapt_ansatz(
+        state: Sequence[Tuple[float, str]],
+        qreg_sizes: Sequence[int],
+        adapt_order=True):
+
+    qregs: Sequence[QuantumRegister] = []
+    qubits = 0
+    for i, size in enumerate(qreg_sizes):
+        qregs.append(QuantumRegister(size, name=ascii_lowercase[i]))
+        qubits += size
+    
+    qc = QuantumCircuit(*qregs)
+    parameters = {}
+    full_qreg = reduce(lambda x, y: x + y[:], qregs, [])
+
+    # adapt_order means the parameters are stored in [tN, tN-1, ..., t1]
+    iter_ = reversed(state) if adapt_order else state
+    for idx, (theta, qubit_op_str) in enumerate(iter_):
+        op = qubitop_from_str(qubit_op_str)
+
+        # Construct pauli gate
+        qiskit_str = circuit.qubitop_to_str(op, qubits)
+        pauli = Pauli(qiskit_str)
+        param = Parameter(f'θ{idx}')
+
+        # Use -θ since qiskit does e^{-iθP} while ADAPT expects e^{θA} for antihermitian A
+        parameters[param] = -theta
+        gate = PauliEvolutionGate(pauli, time=param)
+
+        qc.append(gate, full_qreg)
+    
+    # Set all the theta parameters to their values
+    qc = qc.bind_parameters(parameters)
+
+    return qc
+
+def qubitop_from_str(s: str):
+    # Convert term looking like '1j [X0 Y7]' into complex coeff 1.0j
+    # and operator term into 'X0 Y7'.
+    coeff, op_str = s.split(' ', maxsplit=1)
+    coeff, op_str = complex(coeff), op_str[1:-1]
+    op = QubitOperator(op_str, coeff)
+
+    return op
