@@ -57,8 +57,8 @@ class G14(NLGHamiltonian):
         
         # Different vertices, still adjacent. This equivalent to
         # p(c1 = c2 | v1 != v2)
-        for v1, v2 in g14.edge_links:
-            sp_ham += M(v1, v2)
+        for e in g14.edge_links:
+            sp_ham += M(*e)
         
         return sp_ham
 
@@ -99,6 +99,13 @@ class G14(NLGHamiltonian):
         apex = len(vertices)
         for vertex in range(len(vertices)):
             edges.append((apex, vertex))
+        
+        # Make bidirectional graph
+        reverse_edges = []
+        for edge in edges:
+            reverse_edges.append(edge[::-1])
+        
+        edges = edges + reverse_edges
         
         # Convert to GraphInstance
         return GraphInstance(

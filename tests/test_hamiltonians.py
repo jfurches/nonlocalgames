@@ -96,6 +96,7 @@ class TestG14:
     def test_g14_graph(self):
         graph = G14._get_graph()
 
+        # Check node values
         assert graph.nodes.shape[0] == 14
         assert graph.edge_links.min() == 0
         assert graph.edge_links.max() == 13
@@ -103,6 +104,10 @@ class TestG14:
         # Check apex vertex
         for v in range(13):
             assert (13, v) in graph.edge_links
+        
+        # Check bidirectional edges
+        for edge in graph.edge_links:
+            assert edge[::-1] in graph.edge_links
 
     def test_g14_pcc(self):
         pcc = G14._pcc(4)
@@ -121,15 +126,22 @@ class TestG14:
             else:
                 assert np.allclose(pcc @ psi, 0, rtol=0)
     
-    def test_g14(self):
+    @pytest.mark.parametrize('seed', range(10))
+    def test_g14_properties(self, seed):
         ham = G14(init_mode='normal')
-        ham.init(seed=42)
+        ham.init(seed=seed)
+
+        assert ham.mat.shape == (16, 16)
+        assert is_hermitian(ham.mat)
+
+    @pytest.mark.parametrize('seed', range(10))
+    def test_seeding(self, seed):
+        ham = G14(init_mode='normal')
+        ham.init(seed=seed)
         mat1 = ham.mat
 
         ham = G14(init_mode='normal')
-        ham.init(seed=42)
+        ham.init(seed=seed)
         mat2 = ham.mat
 
         assert np.allclose(mat1, mat2)
-        assert mat1.shape == (16, 16)
-        assert is_hermitian(mat1)
