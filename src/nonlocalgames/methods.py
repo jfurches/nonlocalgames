@@ -25,6 +25,14 @@ def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
     iter_ = 1
 
     ineq_values = []
+
+    # Calculate initial energy
+    ham.init(seed=seed)
+    ham.params = phi_random
+    bra = ham.ref_ket.conj().T
+    E = (bra @ ham.mat @ ham.ref_ket).item().real
+    ineq_values.append(E)
+
     while np.abs(new_ineq_value - ineq_value) > tol:
         ineq_value = new_ineq_value
 
