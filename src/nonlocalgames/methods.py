@@ -3,16 +3,45 @@
 from typing import List, Tuple
 import functools
 
-from scipy.optimize import minimize, OptimizeResult
 import numpy as np
+from scipy.optimize import minimize, OptimizeResult
+from scipy.sparse import csc_matrix
 from openfermion import SymbolicOperator
 
-from adaptgym import AdaptGame
-from adaptgym.hamiltonians import Hamiltonian
+from qiskit.quantum_info import (
+    Statevector,
+    mutual_information as qiskit_mi
+)
 
-def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
+from adaptgym import AdaptGame
+
+from nonlocalgames.hamiltonians import NLGHamiltonian
+
+def dual_phase_optim(
+        ham: NLGHamiltonian,
+        save_mutual_information = False,
+        verbose = 0,
+        tol = 1e-5,
+        seed = None):
     '''Performs dual-phase optimization on a hamiltonian whose ground state represents
-    the optimal settings for a non local game'''
+    the optimal settings for a non local game
+    
+    Args:
+        ham: The hamiltonian representing the game. It should be a subclass of
+            `NLGHamiltonian` to enable optimizing over its parameters.
+        save_mutual_information: Whether or not to calculate the mutual information of
+            the shared quantum state at each iteration. Default false
+        verbose: Controls the amount of output printed to the console. Options
+            are
+
+                0. Nothing
+                1. Iteration number and energy
+                2. Parameters
+                3. Everything, including during ADAPT and phi optimization
+        
+        tol: The convergence tolerance for the bell inequality. Default 1e-5
+        seed: A seed for the RNG to produce replicable results.
+    '''
 
     # Starting hamiltonian, random measurement parameters
     np_random = np.random.default_rng(seed=seed)
@@ -24,14 +53,18 @@ def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
     new_ineq_value = 0
     iter_ = 1
 
-    ineq_values = []
+    metrics = {}
 
     # Calculate initial energy
     ham.init(seed=seed)
     ham.params = phi_random
     bra = ham.ref_ket.conj().T
     E = (bra @ ham.mat @ ham.ref_ket).item().real
-    ineq_values.append(E)
+    metrics.setdefault('energy', []).append(E)
+
+    if save_mutual_information:
+        mi = mutual_information(ham.ref_ket)
+        metrics.setdefault('mutual_information', []).append(mi)
 
     while np.abs(new_ineq_value - ineq_value) > tol:
         ineq_value = new_ineq_value
@@ -67,7 +100,6 @@ def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
             if verbose >= 3:
                 if not info['optim_success']:
                     print(info['optim_message'])
-                # print('Optim:', info['optim_success'])
                 print('Added gate',
                       ham.pool.get_operators()[shared_state.pool_idx[0]],
                       shared_state.params[0])
@@ -127,14 +159,22 @@ def dual_phase_optim(ham: Hamiltonian, verbose = 0, tol = 1e-5, seed = None):
             print()
         iter_ += 1
 
-        ineq_values.append(new_ineq_value)
-    
-    # Fixme: this saves in reversed order, we should have a reverse call
-    # so that we can deserialize and just append to a qiskit circuit easier
+        metrics.setdefault('energy', []).append(E)
+        if save_mutual_information:
+            mi = mutual_information(ham.ref_ket)
+            metrics.setdefault('mutual_information', []).append(mi)
+
     ansatz_obj: List[Tuple[float, SymbolicOperator]] = []
     for pool_idx, theta in zip(shared_state.pool_idx, shared_state.params):
         gate = ham.pool.get_operators()[pool_idx]
         ansatz_obj.append((theta, str(gate)))
+    
+    # Reverse the gates from Adapt-order to regular
+    ansatz_obj = ansatz_obj[::-1]
 
-    return ineq_values, ansatz_obj[::-1], phi
+    return ansatz_obj, phi, metrics
 
+def mutual_information(ket: csc_matrix):
+    d = int(np.sqrt(ket.shape[0]))
+    statevector = Statevector(ket.todense(), dims=(d, d))
+    return qiskit_mi(statevector)

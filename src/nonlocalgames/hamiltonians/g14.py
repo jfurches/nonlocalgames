@@ -17,11 +17,12 @@ class G14(NLGHamiltonian):
     # Optimal quantum coloring
     chi_q = 4
 
-    def __init__(self, **kwargs):
+    def __init__(self, ham_type = 'violation', **kwargs):
         super().__init__(**kwargs)
         
         self._qubits = int(np.ceil(np.log2(self.chi_q)))
         self._pool = AllPauliPool(qubits=2 * self._qubits)
+        self._ham_type = ham_type
     
     def _init_pool(self):
         self._pool.init(qubits=2 * self._qubits)
@@ -34,6 +35,10 @@ class G14(NLGHamiltonian):
 
         # Projector onto matching color assignments, full subspace
         pcc = G14._pcc(2 * self._qubits)
+        if self._ham_type == 'full':
+            pcc = 2 * pcc - np.eye(pcc.shape[0])
+        elif self._ham_type == 'nonviolation':
+            pcc = np.eye(pcc.shape[0]) - pcc
 
         # Measurement operator for equal colors
         def M(*args):
