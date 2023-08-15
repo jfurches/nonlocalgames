@@ -49,7 +49,7 @@ def dual_phase_optim(
     phi = None
     shared_state = None
 
-    ineq_value = -np.inf
+    ineq_value = np.inf
     new_ineq_value = 0
     iter_ = 1
 
@@ -59,8 +59,8 @@ def dual_phase_optim(
     ham.init(seed=seed)
     ham.params = phi_random
     bra = ham.ref_ket.conj().T
-    E = (bra @ ham.mat @ ham.ref_ket).item().real
-    metrics.setdefault('energy', []).append(E)
+    new_ineq_value = (bra @ ham.mat @ ham.ref_ket).item().real
+    metrics.setdefault('energy', []).append(new_ineq_value)
 
     if save_mutual_information:
         mi = mutual_information(ham.ref_ket)
@@ -119,22 +119,28 @@ def dual_phase_optim(
             ham.params = phi
             E = (bra @ ham.mat @ ket).item().real
             return E
-        
-        # Use analytic gradient if provided
-        gradient = None
-        if hasattr(ham, 'gradient') and callable(ham.gradient):
-            # Transform gradient function gradient(self, state, params=None)
-            # into gradient(self, params=None)
-            gradient = functools.partial(ham.gradient, ket)
-        
-        last_phi = phi
-        def callback(res: OptimizeResult):
-            print(res)
-            diff = res.x - last_phi
-            grad = res.jac
 
-            dot = np.dot(diff.ravel(), grad.ravel())
-            last_phi = res.x
+        # We can save this before the phi optimization since
+        # that won't change the MI of our shared state.
+        if save_mutual_information:
+            mi = mutual_information(ket)
+            metrics.setdefault('mutual_information', []).append(mi)
+
+        # Use analytic gradient if provided
+        # gradient = None
+        # if hasattr(ham, 'gradient') and callable(ham.gradient):
+        #     # Transform gradient function gradient(self, state, params=None)
+        #     # into gradient(self, params=None)
+        #     gradient = functools.partial(ham.gradient, ket)
+
+        # last_phi = phi
+        # def callback(res: OptimizeResult):
+        #     print(res)
+        #     diff = res.x - last_phi
+        #     grad = res.jac
+
+        #     dot = np.dot(diff.ravel(), grad.ravel())
+        #     last_phi = res.x
 
         kwargs = {
             # Minimize phi while fixing phi_a0 to 0
@@ -159,10 +165,7 @@ def dual_phase_optim(
             print()
         iter_ += 1
 
-        metrics.setdefault('energy', []).append(E)
-        if save_mutual_information:
-            mi = mutual_information(ham.ref_ket)
-            metrics.setdefault('mutual_information', []).append(mi)
+        metrics.setdefault('energy', []).append(new_ineq_value)
 
     ansatz_obj: List[Tuple[float, SymbolicOperator]] = []
     for pool_idx, theta in zip(shared_state.pool_idx, shared_state.params):
@@ -175,6 +178,9 @@ def dual_phase_optim(
     return ansatz_obj, phi, metrics
 
 def mutual_information(ket: csc_matrix):
+    if hasattr(ket, 'todense'):
+        ket = ket.todense()
+
     d = int(np.sqrt(ket.shape[0]))
-    statevector = Statevector(ket.todense(), dims=(d, d))
+    statevector = Statevector(ket, dims=(d, d))
     return qiskit_mi(statevector)

@@ -5,16 +5,21 @@ from string import ascii_lowercase
 
 import numpy as np
 
-from qiskit import (
-    QuantumCircuit,
-    QuantumRegister,
-    ClassicalRegister,
-    transpile
-)
-from qiskit.quantum_info import Pauli
-from qiskit.circuit import ParameterVector, Parameter
-from qiskit.circuit.library import PauliEvolutionGate
-from qiskit_aer import AerSimulator
+# Qiskit has deprecated code inside of it
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings(action='ignore', category=DeprecationWarning)
+    from qiskit_aer import AerSimulator
+    from qiskit import (
+        QuantumCircuit,
+        QuantumRegister,
+        ClassicalRegister,
+        transpile
+    )
+    from qiskit.quantum_info import Pauli
+    from qiskit.circuit import ParameterVector, Parameter
+    from qiskit.circuit.library import PauliEvolutionGate
+    from qiskit_aer import AerSimulator
 
 from openfermion import QubitOperator
 from adaptgym.util import circuit
