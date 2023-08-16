@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Sequence, Tuple
-from functools import cached_property, partial, reduce
+from typing import Sequence, Tuple, Dict
+from functools import cached_property, reduce
 from string import ascii_lowercase
 
 import numpy as np
@@ -9,20 +9,22 @@ import numpy as np
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(action='ignore', category=DeprecationWarning)
-    from qiskit_aer import AerSimulator
     from qiskit import (
         QuantumCircuit,
         QuantumRegister,
         ClassicalRegister,
         transpile
     )
+    from qiskit.extensions import Initialize
     from qiskit.quantum_info import Pauli
     from qiskit.circuit import ParameterVector, Parameter
     from qiskit.circuit.library import PauliEvolutionGate
     from qiskit_aer import AerSimulator
+    from qiskit_aer.library import SaveStatevector
 
 from openfermion import QubitOperator
 from adaptgym.util import circuit
+from nonlocalgames import util
 
 @dataclass
 class NLGCircuit:
@@ -59,6 +61,7 @@ class NLGCircuit:
     # Array of shape (players, questions, [qubits_per_player = 1])
     phi: np.ndarray
 
+    save_statevector: bool = field(default=False)
     sim: AerSimulator = field(default=None, kw_only=True)
 
     # Layer of rotation gates at the end that we'll construct
@@ -90,11 +93,19 @@ class NLGCircuit:
                 # the question they receive
                 self.qc.ry(self.measurement_params[i], qubit)
                 i += 1
-            
-            # Add measurement
+        
+        if self.save_statevector:
+            full_qreg = reduce(lambda x, y: x + y[:], self.qregs, [])
+            self.qc.append(SaveStatevector(self.qc.num_qubits), full_qreg)
+
+        # Add measurement
+        for qreg, creg in zip(self.qregs, self.cregs):
             self.qc.measure(qreg, creg)
         
-    def ask(self, q: Sequence[int], **run_options):
+    def ask(self,
+            q: Sequence[int],
+            return_statevector = False,
+            **run_options):
         '''Query the players with a vector of n questions.
         
         Args:
@@ -110,20 +121,14 @@ class NLGCircuit:
         eval_qc = self.transpiled.bind_parameters({self.measurement_params: phi})
 
         job = self.sim.run(eval_qc, **run_options)
-        counts = job.result().get_counts()
-
-        postprocessed = {}
-        from_bin = partial(int, base=2)
-        for bitstring, count in counts.items():
-            # Transform the binary strings back into integers per player.
-            # Qiskit will output a bit string in the format
-            # 'bn bn-1 ... b0', where bi is the bit string for classical register i
-            # (self.cregs[i]). Additionally, the bits are reversed, i.e. in little endian order
-            # with the MSB on the left.
-            answers = tuple(map(from_bin, reversed(bitstring.split(' '))))
-            postprocessed[answers] = count
+        result = job.result()
+        counts: Dict[str, int] = result.get_counts()
+        counts = util.from_ket_form(counts)
         
-        return postprocessed
+        if return_statevector:
+            return counts, result.get_statevector()
+
+        return counts
 
     @cached_property
     def transpiled(self):
@@ -147,8 +152,9 @@ class NLGCircuit:
 
 def load_adapt_ansatz(
         state: Sequence[Tuple[float, str]],
+        ref_ket,
         qreg_sizes: Sequence[int],
-        adapt_order=True):
+        adapt_order=False):
 
     qregs: Sequence[QuantumRegister] = []
     qubits = 0
@@ -160,6 +166,14 @@ def load_adapt_ansatz(
     parameters = {}
     full_qreg = reduce(lambda x, y: x + y[:], qregs, [])
 
+    # Initialize the circuit with reference ket
+    qc.append(
+        Initialize(
+            ref_ket,
+            num_qubits=qubits if isinstance(ref_ket, int) else None),
+        full_qreg
+    )
+
     # adapt_order means the parameters are stored in [tN, tN-1, ..., t1]
     iter_ = reversed(state) if adapt_order else state
     for idx, (theta, qubit_op_str) in enumerate(iter_):
@@ -167,7 +181,7 @@ def load_adapt_ansatz(
 
         # Construct pauli gate
         qiskit_str = circuit.qubitop_to_str(op, qubits)
-        pauli = Pauli(qiskit_str)
+        pauli = Pauli(qiskit_str[::-1])
         param = Parameter(f'θ{idx}')
 
         # Use -θ since qiskit does e^{-iθP} while ADAPT expects e^{θA} for antihermitian A
