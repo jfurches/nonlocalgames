@@ -42,7 +42,7 @@ def main(args: argparse.Namespace):
     with mp.Pool(processes=cpus) as p:
         results: Sequence[TaskResult] = list(tqdm(
             p.imap(task, task_args),
-            total=len(seeds)
+            total=trials
         ))
 
     print('Postprocessing')
