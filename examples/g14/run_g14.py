@@ -20,16 +20,30 @@ def get_cli_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--num-cpus', type=int, default=1)
     parser.add_argument('--seeds', default='../../data/seeds.txt')
+    parser.add_argument('--weighting', default=None)
+    parser.add_argument('-n', '--trials', type=int, default=None)
     args = parser.parse_args()
     return args
 
 def main(args: argparse.Namespace):
     cpus = args.num_cpus
     seeds = util.load_seeds(args.seeds)
+    trials = args.trials or len(seeds)
+
+    assert trials < len(seeds), \
+        f'Not enough seeds saved to perform {trials} trials (max {len(seeds)})'
+
+    task_args = list(map(
+        lambda s: TaskArgs(s, weighting=args.weighting),
+        seeds[:trials]
+    ))
 
     print('Starting processing')
     with mp.Pool(processes=cpus) as p:
-        results: Sequence[TaskResult] = list(tqdm(p.imap(task, seeds), total=len(seeds)))
+        results: Sequence[TaskResult] = list(tqdm(
+            p.imap(task, task_args),
+            total=len(seeds)
+        ))
 
     print('Postprocessing')
     dataframes = []
@@ -54,6 +68,12 @@ def main(args: argparse.Namespace):
 
 
 @dataclass
+class TaskArgs:
+    seed: int
+    weighting: str | None = None
+
+
+@dataclass
 class TaskResult:
     df: pd.DataFrame
     state: Sequence[Any]
@@ -65,9 +85,10 @@ class TaskResult:
         return self.df.energy.min()
 
 
-def task(seed: int) -> TaskResult:
+def task(args: TaskArgs) -> TaskResult:
+    seed = args.seed
     records = []
-    ham = G14()
+    ham = G14(weighting=args.weighting)
     state, phi, metrics = methods.dual_phase_optim(
         ham, verbose=0, seed=seed, tol=1e-6, save_mutual_information=True)
 

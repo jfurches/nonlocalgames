@@ -17,12 +17,30 @@ class G14(NLGHamiltonian):
     # Optimal quantum coloring
     chi_q = 4
 
-    def __init__(self, ham_type = 'violation', **kwargs):
+    ham_types = ('violation', 'nonviolation', 'full')
+
+    def __init__(self,
+        ham_type: str = 'violation',
+        weighting: str | None = None,
+        **kwargs):
         super().__init__(**kwargs)
+        '''Construct hamiltonian for G14
         
+        Args:
+            ham_type: The hamiltonian type. `violation` minimizes the probability
+                that the quantum strategy violates the game rules. `full` both minimizes
+                violations and maximizes winning strategies.
+            
+            weighting: How to weight the hamiltonian terms $H_v$ and $H_e$. Default is
+                None, but passing `balanced` will scale the terms to account for
+                imbalance in the number of questions.
+        '''
+
         self._qubits = int(np.ceil(np.log2(self.chi_q)))
         self._pool = AllPauliPool(qubits=2 * self._qubits)
+        assert ham_type in self.ham_types
         self._ham_type = ham_type
+        self._weighting = weighting
     
     def _init_pool(self):
         self._pool.init(qubits=2 * self._qubits)
@@ -42,7 +60,9 @@ class G14(NLGHamiltonian):
 
         # Measurement operator for equal colors
         def M(*args):
-            ops = [np.kron(Ry(phi[i, v, 0]), Ry(phi[i, v, 1])) for i, v in enumerate(args)]
+            ops = [
+                np.kron(Ry(phi[i, v, 0]), Ry(phi[i, v, 1])) 
+                for i, v in enumerate(args)]
             N = len(args)
             idx = list(range(N))
 
@@ -53,17 +73,25 @@ class G14(NLGHamiltonian):
         d = 2 ** (2 * self._qubits)
         sp_ham = csc_matrix((d, d), dtype=complex)
 
+        wv, we = 1, 1
+        vertices, edges = g14.nodes, g14.edge_links
+        if self._weighting == 'balanced':
+            nv, ne = len(vertices), len(edges)
+            w = np.array([nv, ne], dtype=float)
+            w /= w.sum()
+            we, wv = w
+
         # Same vertex asked of each player,
         # p(c1 != c2 | v, v), which works out to
         # 1 - p(c1 = c2 | v, v)
         I = np.eye(d)
-        for v in range(len(g14.nodes)):
-            sp_ham += I - M(v, v)
+        for v in range(len(vertices)):
+            sp_ham += wv * (I - M(v, v))
         
         # Different vertices, still adjacent. This equivalent to
         # p(c1 = c2 | v1 != v2)
-        for e in g14.edge_links:
-            sp_ham += M(*e)
+        for e in edges:
+            sp_ham += we * M(*e)
         
         return sp_ham
 

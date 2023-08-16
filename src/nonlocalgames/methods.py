@@ -29,8 +29,10 @@ def dual_phase_optim(
     Args:
         ham: The hamiltonian representing the game. It should be a subclass of
             `NLGHamiltonian` to enable optimizing over its parameters.
+
         save_mutual_information: Whether or not to calculate the mutual information of
             the shared quantum state at each iteration. Default false
+
         verbose: Controls the amount of output printed to the console. Options
             are
 
@@ -40,6 +42,7 @@ def dual_phase_optim(
                 3. Everything, including during ADAPT and phi optimization
         
         tol: The convergence tolerance for the bell inequality. Default 1e-5
+
         seed: A seed for the RNG to produce replicable results.
     '''
 
