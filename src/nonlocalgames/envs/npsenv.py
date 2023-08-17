@@ -5,7 +5,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium.spaces import Box
 
-from qiskit import QuantumCircuit, transpile
+from qiskit import QuantumCircuit, transpile, Aer
 from qiskit.circuit import ParameterVector
 from qiskit_aer import AerSimulator
 from qiskit_aer.library import SaveStatevector
@@ -39,7 +39,7 @@ class NPSEnv(gym.Env):
         self._config = config
         self._validate_config()
 
-        self._sim = AerSimulator(method='statevector')
+        self._sim: AerSimulator = Aer.get_backend('aer_simulator_statevector')
         self._qc, self._theta = self._create_ansatz()
         self._ham, self._phi = self._create_hamiltonian()
 

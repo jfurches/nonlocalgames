@@ -9,8 +9,8 @@ import pytest
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(action='ignore', category=DeprecationWarning)
+    from qiskit import Aer
     from qiskit.quantum_info import Statevector
-    from qiskit_aer import AerSimulator
 
 import openfermion as of
 import numpy as np
@@ -27,7 +27,7 @@ from nonlocalgames.qinfo import Ry, tensor
 @pytest.fixture(scope='session')
 def sim():
     '''Fixture to create qiskit backend'''
-    return AerSimulator(method='statevector')
+    return Aer.get_backend('aer_simulator_statevector')
 
 @pytest.fixture(scope='session')
 def saved_state():
