@@ -22,7 +22,8 @@ def dual_phase_optim(
         save_mutual_information = False,
         verbose = 0,
         tol = 1e-5,
-        seed = None):
+        seed = None,
+        **adapt_opt):
     '''Performs dual-phase optimization on a hamiltonian whose ground state represents
     the optimal settings for a non local game
     
@@ -69,6 +70,8 @@ def dual_phase_optim(
         mi = mutual_information(ham.ref_ket)
         metrics.setdefault('mutual_information', []).append(mi)
 
+    shared_state = None
+
     while np.abs(new_ineq_value - ineq_value) > tol:
         ineq_value = new_ineq_value
 
@@ -82,7 +85,7 @@ def dual_phase_optim(
         phi = phi_random if phi is None else phi
         ham.params = phi
 
-        env = AdaptGame(ham, criteria='max')
+        env = AdaptGame(ham, criteria='max', **adapt_opt)
         done = False
         _, info = env.reset()
 
@@ -109,6 +112,7 @@ def dual_phase_optim(
                 print()
 
         theta = shared_state.params
+        metrics.setdefault('adapt_pool_gradmax', [0]).append(info['grad_max'])
 
         if verbose >= 2:
             print('Theta:', theta)
@@ -160,6 +164,7 @@ def dual_phase_optim(
 
         phi: np.ndarray = res.x
         new_ineq_value = res.fun
+
         if verbose:
             if verbose >= 2:
                 print(res)
@@ -170,11 +175,17 @@ def dual_phase_optim(
 
         metrics.setdefault('energy', []).append(new_ineq_value)
 
+        # Save parameter gradients
+        metrics['phi_grad'] = res.jac
+        shared_state.H = ham.mat
+        metrics['theta_grad'] = shared_state.gradient(theta)
+
+    # Optimization finished, save ansatz in a serialized manner
     ansatz_obj: List[Tuple[float, SymbolicOperator]] = []
     for pool_idx, theta in zip(shared_state.pool_idx, shared_state.params):
         gate = ham.pool.get_operators()[pool_idx]
         ansatz_obj.append((theta, str(gate)))
-    
+
     # Reverse the gates from Adapt-order to regular
     ansatz_obj = ansatz_obj[::-1]
 

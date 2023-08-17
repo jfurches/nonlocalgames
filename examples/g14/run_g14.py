@@ -3,7 +3,8 @@ import logging
 import argparse
 import multiprocessing as mp
 from dataclasses import dataclass
-from typing import Sequence, Any
+from typing import Sequence, Any, Dict
+import sys
 
 import numpy as np
 import pandas as pd
@@ -16,12 +17,24 @@ from nonlocalgames import util
 
 gym.logger.set_level(logging.CRITICAL)
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            if obj.size == 1:
+                return obj.item()
+
+            return obj.tolist()
+
+        return super().default(obj)
+
 def get_cli_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--num-cpus', type=int, default=1)
     parser.add_argument('--seeds', default='../../data/seeds.txt')
     parser.add_argument('--weighting', default=None)
     parser.add_argument('-n', '--trials', type=int, default=None)
+    parser.add_argument('--dpo-tol', type=float, default=1e-6)
+    parser.add_argument('--adapt-tol', type=float, default=1e-3)
     args = parser.parse_args()
     return args
 
@@ -34,7 +47,10 @@ def main(args: argparse.Namespace):
         f'Not enough seeds saved to perform {trials} trials (max {len(seeds)})'
 
     task_args = list(map(
-        lambda s: TaskArgs(s, weighting=args.weighting),
+        lambda s: TaskArgs(s,
+                           weighting=args.weighting,
+                           dpo_tol=args.dpo_tol,
+                           adapt_tol=args.adapt_tol),
         seeds[:trials]
     ))
 
@@ -42,7 +58,8 @@ def main(args: argparse.Namespace):
     with mp.Pool(processes=cpus) as p:
         results: Sequence[TaskResult] = list(tqdm(
             p.imap(task, task_args),
-            total=trials
+            total=trials,
+            file=sys.stdout
         ))
 
     print('Postprocessing')
@@ -60,7 +77,7 @@ def main(args: argparse.Namespace):
                     'state': result.state,
                     'phi': result.phi.reshape(2, 14, 2).tolist(),
                     'metrics': result.metrics
-                }, f)
+                }, f, cls=NumpyEncoder)
 
     print('Aggregating results')
     df = pd.concat(dataframes, axis=0, ignore_index=True)
@@ -71,6 +88,8 @@ def main(args: argparse.Namespace):
 class TaskArgs:
     seed: int
     weighting: str | None = None
+    dpo_tol: float = 1e-6
+    adapt_tol: float = 1e-3
 
 
 @dataclass
@@ -90,7 +109,12 @@ def task(args: TaskArgs) -> TaskResult:
     records = []
     ham = G14(weighting=args.weighting)
     state, phi, metrics = methods.dual_phase_optim(
-        ham, verbose=0, seed=seed, tol=1e-6, save_mutual_information=True)
+        ham,
+        verbose=0,
+        seed=seed,
+        tol=args.dpo_tol,
+        save_mutual_information=True,
+        adapt_thresh=args.adapt_tol)
 
     for iter_ in range(len(metrics['energy'])):
         record = {
@@ -99,7 +123,8 @@ def task(args: TaskArgs) -> TaskResult:
         }
 
         for k, series in metrics.items():
-            record[k] = series[iter_]
+            if k not in ('theta_grad', 'phi_grad'):
+                record[k] = series[iter_]
 
         records.append(record)
 
