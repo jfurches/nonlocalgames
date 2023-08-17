@@ -9,21 +9,12 @@ import pytest
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(action='ignore', category=DeprecationWarning)
-    from qiskit import (
-        QuantumCircuit,
-        QuantumRegister,
-        ClassicalRegister,
-        transpile
-    )
-    from qiskit.quantum_info import Pauli, Statevector, state_fidelity
-    from qiskit.circuit import ParameterVector, Parameter
-    from qiskit.circuit.library import PauliEvolutionGate
+    from qiskit.quantum_info import Statevector
     from qiskit_aer import AerSimulator
 
 import openfermion as of
 import numpy as np
 from adaptgym import AdaptiveAnsatz
-from adaptgym.util import circuit
 
 from nonlocalgames.circuit import (
     NLGCircuit,
@@ -32,7 +23,6 @@ from nonlocalgames.circuit import (
 )
 from nonlocalgames.hamiltonians import G14
 from nonlocalgames.qinfo import Ry, tensor
-from nonlocalgames.util import from_ket_form
 
 @pytest.fixture(scope='session')
 def sim():
