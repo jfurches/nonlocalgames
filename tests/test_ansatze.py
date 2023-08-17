@@ -92,6 +92,9 @@ class TestState:
     def test_states(self,
                     adapt_state: Tuple[AdaptiveAnsatz, np.ndarray],
                     nlg: NLGCircuit):
+        # This test demonstrates how to get ADAPT and qiskit to output
+        # the same statevector
+
         # Get ADAPT state. NLGCircuit provided through fixture
         adapt_ansatz, phi = adapt_state
 
@@ -131,6 +134,20 @@ class TestState:
 
             # We reverse the qubit order and the Pauli ordering in circuit preparation
             # to convert between qiskit and ADAPT
+    
+    def test_results(self, nlg):
+        # Test that it gets vertex questions right. This checks that we constructed
+        # the circuit properly.
+        shots = 1024
+        for q in range(14):
+            counts = nlg.ask((q, q), shots=shots)
+            s = 0
+            for k, c in counts.items():
+                if k[0] == k[1]:
+                    s += c
+            
+            p_win = s / shots
+            assert np.isclose(p_win, 1)
 
 T = TypeVar('T')
 def dict_allclose(d1: Dict[T, float], d2: Dict[T, float]) -> bool:

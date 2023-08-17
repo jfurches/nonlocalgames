@@ -1,10 +1,11 @@
-from functools import cache
+from functools import cache, cached_property
 import json
 from importlib import resources
 
 import numpy as np
 from scipy.sparse import csc_matrix
 from gymnasium.spaces import GraphInstance
+from qiskit.quantum_info import Statevector
 
 from adaptgym.pools import AllPauliPool
 
@@ -12,7 +13,29 @@ from .nlg_hamiltonian import NLGHamiltonian
 from ..qinfo import *
 
 class G14(NLGHamiltonian):
-    # Phi matrix, players x vertices
+    '''Hamiltonian encoding G14 non-local game from [1].
+    
+    G14 is a non-local game where the referee asks 2 players,
+    Alice and Bob, questions to determine if they've properly
+    colored the graph G14. The questions and rules are as follows:
+
+        1. A vertex question (v, v). Both must answer with the same color.
+        2. An edge question (v1 ~ v2). Both must answer with different colors.
+
+    Since it's known that G14 admits a quantum 4-coloring, each player
+    only needs 2 qubits to represent all possible colors, so this
+    hamiltonian acts on 4 qubits.
+
+    The default mode is `violation`, which corresponds to constructing
+    a hamiltonian whose energy measures how often the shared quantum
+    strategy violates the rules of the game. Minimizing the energy of this
+    results in a quantum strategy satisfying the rules of the game and using
+    the optimal quantum coloring. Other modes are currently not implemented.
+
+    References:
+        [1] https://arxiv.org/abs/1801.03542
+    '''
+    # Phi matrix, players x vertices x qubits
     desired_shape = (2, 14, 2)
     # Optimal quantum coloring
     chi_q = 4
@@ -76,6 +99,8 @@ class G14(NLGHamiltonian):
         wv, we = 1, 1
         vertices, edges = g14.nodes, g14.edge_links
         if self._weighting == 'balanced':
+            # Re-weight the hamiltonian terms to place more
+            # emphasis on the infrequent (vertex) questions.
             nv, ne = len(vertices), len(edges)
             w = np.array([nv, ne], dtype=float)
             w /= w.sum()
@@ -95,20 +120,31 @@ class G14(NLGHamiltonian):
         
         return sp_ham
 
-    @property
+    @cached_property
     def ref_ket(self):
-        d = 2 ** (2 * self._qubits)
         # Equal superposition state
-        ket = csc_matrix(np.full((d, 1), 1 / np.sqrt(d)), dtype=complex)
+        label = '+' * (2 * self._qubits)
+        v = Statevector.from_label(label)
+        ket = csc_matrix(v.data, dtype=complex).reshape(-1, 1)
 
         return ket
 
     @cache
     @staticmethod
     def _pcc(qubits: int) -> csc_matrix:
+        # The equal color projector consists of
+        #   |00><00| + |11><11| + ... + |33><33|.
+        # This is a diagonal matrix, very sparse. |00><00| obviously
+        # has index (0, 0). Color c projector |cc> is 4*c + c = 5c,
+        # hence we can just construct the sparse matrix with 1-entries
+        # at (5c, 5c) for c = (0, 1, 2, 3).
         idx = list(map(lambda x: 5*x, range(G14.chi_q)))
         data = np.ones(len(idx))
-        pcc = csc_matrix((data, (idx, idx)), shape=(2 ** qubits, 2 ** qubits), dtype=complex)
+        pcc = csc_matrix(
+            (data, (idx, idx)),
+            shape=(2 ** qubits, 2 ** qubits),
+            dtype=complex
+        )
         return pcc
 
     @cache
@@ -128,7 +164,7 @@ class G14(NLGHamiltonian):
             for v1, v2 in edges
         ]
 
-        # Transform into G14
+        # Transform into G14 with the addition of an apex vertex
         apex = len(vertices)
         for vertex in range(len(vertices)):
             edges.append((apex, vertex))
