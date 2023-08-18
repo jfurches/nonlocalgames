@@ -155,8 +155,13 @@ def dual_phase_optim(
             'method': 'BFGS',
             # 'jac': gradient,
             # 'callback': callback
+            'options': {
+                'gtol': env.adapt_opt['theta_thresh']
+            }
         }
-        res = minimize(get_energy, x0=phi, **kwargs)
+        res = minimize(get_energy,
+                       x0=phi,
+                       **kwargs)
 
         # Get our optimization results
         if not res.success:
