@@ -41,12 +41,13 @@ class G14(NLGHamiltonian):
     chi_q = 4
 
     ham_types = ('violation', 'nonviolation', 'full')
+    measurement_layers = ('ry', 'u3')
 
     def __init__(self,
         ham_type: str = 'violation',
         weighting: str | None = None,
+        measurement_layer = 'ry',
         **kwargs):
-        super().__init__(**kwargs)
         '''Construct hamiltonian for G14
         
         Args:
@@ -59,8 +60,16 @@ class G14(NLGHamiltonian):
                 imbalance in the number of questions.
         '''
 
+        # Construct parameter shape before calling super init
+        assert measurement_layer in self.measurement_layers
+        self._measurement_layer = measurement_layer
+        if self._measurement_layer == 'u3':
+            self.desired_shape = (*self.desired_shape, 3)
+        
+        super().__init__(**kwargs)
+
         self._qubits = int(np.ceil(np.log2(self.chi_q)))
-        self._pool = AllPauliPool(qubits=2 * self._qubits)
+        self._pool = AllPauliPool(qubits=2 * self._qubits, odd_Y=False)
         assert ham_type in self.ham_types
         self._ham_type = ham_type
         self._weighting = weighting
@@ -83,9 +92,16 @@ class G14(NLGHamiltonian):
 
         # Measurement operator for equal colors
         def M(*args):
-            ops = [
-                np.kron(Ry(phi[i, v, 0]), Ry(phi[i, v, 1])) 
-                for i, v in enumerate(args)]
+            if self._measurement_layer == 'ry':
+                ops = [
+                    np.kron(Ry(phi[i, v, 0]), Ry(phi[i, v, 1])) 
+                    for i, v in enumerate(args)
+                ]
+            elif self._measurement_layer == 'u3':
+                ops = [
+                    np.kron(U3(*phi[i, v, 0]), U3(*phi[i, v, 1])) 
+                    for i, v in enumerate(args)
+                ]
             N = len(args)
             idx = list(range(N))
 
