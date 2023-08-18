@@ -65,6 +65,8 @@ class G14(NLGHamiltonian):
         self._measurement_layer = measurement_layer
         if self._measurement_layer == 'u3':
             self.desired_shape = (*self.desired_shape, 3)
+        elif self._measurement_layer == 'ry':
+            self.desired_shape = (*self.desired_shape, 1)
         
         super().__init__(**kwargs)
 
@@ -89,19 +91,15 @@ class G14(NLGHamiltonian):
             pcc = 2 * pcc - np.eye(pcc.shape[0])
         elif self._ham_type == 'nonviolation':
             pcc = np.eye(pcc.shape[0]) - pcc
+        
+        measure_func = U3 if self._measurement_layer == 'u3' else Ry
 
         # Measurement operator for equal colors
         def M(*args):
-            if self._measurement_layer == 'ry':
-                ops = [
-                    np.kron(Ry(phi[i, v, 0]), Ry(phi[i, v, 1])) 
-                    for i, v in enumerate(args)
-                ]
-            elif self._measurement_layer == 'u3':
-                ops = [
-                    np.kron(U3(*phi[i, v, 0]), U3(*phi[i, v, 1])) 
-                    for i, v in enumerate(args)
-                ]
+            ops = [
+                np.kron(measure_func(*phi[i, v, 0]), measure_func(phi[i, v, 1])) 
+                for i, v in enumerate(args)
+            ]
             N = len(args)
             idx = list(range(N))
 

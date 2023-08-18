@@ -156,7 +156,8 @@ def dual_phase_optim(
             # 'jac': gradient,
             # 'callback': callback
             'options': {
-                'gtol': env.adapt_opt['theta_thresh']
+                'gtol': 1e-6,
+                # 'maxiter': 1000
             }
         }
         res = minimize(get_energy,
