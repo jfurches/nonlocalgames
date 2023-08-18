@@ -1,21 +1,26 @@
+import argparse
+import glob
 import json
 import logging
-import argparse
 import multiprocessing as mp
-from dataclasses import dataclass
-from typing import Sequence, Any, Dict
+import os
+import pickle as pkl
 import sys
+from dataclasses import dataclass
+from typing import Any, Dict, Sequence
+import shutil
 
+import gymnasium as gym
 import numpy as np
 import pandas as pd
-import gymnasium as gym
 from tqdm import tqdm
 
-from nonlocalgames import methods
+from nonlocalgames import methods, util
 from nonlocalgames.hamiltonians import G14
-from nonlocalgames import util
 
 gym.logger.set_level(logging.CRITICAL)
+
+TMPDIR = 'tmpdata'
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -38,27 +43,50 @@ def get_cli_args():
     args = parser.parse_args()
     return args
 
-def main(args: argparse.Namespace):
-    cpus = args.num_cpus
+def create_trials(args: argparse.Namespace):
     seeds = util.load_seeds(args.seeds)
     trials = args.trials or len(seeds)
 
+    # Construct temporary directory to hold intermediate
+    # results in case stuff goes sideways
+    os.makedirs(TMPDIR, exist_ok=True)
+
     assert trials < len(seeds), \
         f'Not enough seeds saved to perform {trials} trials (max {len(seeds)})'
+
+    seeds = set(seeds[:trials])
+
+    # Now we find all trials in the intermediate directory and don't repeat them
+    # to resume from where we started
+    already_done = set()
+    for file in glob.glob(os.path.join(TMPDIR, '*.pkl')):
+        seed: str = os.path.splitext(os.path.basename(file))[0]
+        seed = int(seed)
+        already_done.add(seed)
+    
+    remaining = seeds.difference(already_done)
 
     task_args = list(map(
         lambda s: TaskArgs(s,
                            weighting=args.weighting,
                            dpo_tol=args.dpo_tol,
                            adapt_tol=args.adapt_tol),
-        seeds[:trials]
+        remaining
     ))
 
+    return task_args
+
+def main(args: argparse.Namespace):
+    cpus = args.num_cpus
+    task_args = create_trials(args)
+
     print('Starting processing')
+    # Call tqdm(pool.imap) to construct a progress bar. We then wrap that
+    # in list() to pull results from the pool as they come in.
     with mp.Pool(processes=cpus) as p:
         results: Sequence[TaskResult] = list(tqdm(
             p.imap(task, task_args),
-            total=trials,
+            total=len(task_args),
             file=sys.stdout
         ))
 
@@ -83,6 +111,8 @@ def main(args: argparse.Namespace):
     df = pd.concat(dataframes, axis=0, ignore_index=True)
     df.to_csv('data/g14_trials.csv', index=False)
 
+    # Cleanup intermediate results directory
+    shutil.rmtree(TMPDIR)
 
 @dataclass
 class TaskArgs:
@@ -129,7 +159,13 @@ def task(args: TaskArgs) -> TaskResult:
         records.append(record)
 
     df = pd.DataFrame.from_records(records)
-    return TaskResult(df, state, phi, metrics)
+    result = TaskResult(df, state, phi, metrics)
+
+    # Dump to temporary directory
+    with open(os.path.join(TMPDIR, f'{seed}.pkl'), 'rb') as f:
+        pkl.dump(result, f)
+
+    return result
 
 if __name__ == '__main__':
     args = get_cli_args()
