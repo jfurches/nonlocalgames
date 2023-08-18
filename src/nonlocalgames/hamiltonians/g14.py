@@ -97,7 +97,7 @@ class G14(NLGHamiltonian):
         # Measurement operator for equal colors
         def M(*args):
             ops = [
-                np.kron(measure_func(*phi[i, v, 0]), measure_func(phi[i, v, 1])) 
+                np.kron(measure_func(*phi[i, v, 0]), measure_func(*phi[i, v, 1])) 
                 for i, v in enumerate(args)
             ]
             N = len(args)
