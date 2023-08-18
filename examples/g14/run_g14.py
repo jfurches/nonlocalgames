@@ -80,6 +80,8 @@ def main(args: argparse.Namespace):
     cpus = args.num_cpus
     task_args = create_trials(args)
 
+    os.makedirs('data', exist_ok=True)
+
     print('Starting processing')
     # Call tqdm(pool.imap) to construct a progress bar. We then wrap that
     # in list() to pull results from the pool as they come in.
