@@ -164,7 +164,7 @@ def task(args: TaskArgs) -> TaskResult:
     result = TaskResult(df, state, phi, metrics)
 
     # Dump to temporary directory
-    with open(os.path.join(TMPDIR, f'{seed}.pkl'), 'rb') as f:
+    with open(os.path.join(TMPDIR, f'{seed}.pkl'), 'wb') as f:
         pkl.dump(result, f)
 
     return result
