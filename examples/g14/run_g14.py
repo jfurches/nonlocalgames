@@ -51,7 +51,7 @@ def create_trials(args: argparse.Namespace):
     # results in case stuff goes sideways
     os.makedirs(TMPDIR, exist_ok=True)
 
-    assert trials < len(seeds), \
+    assert trials <= len(seeds), \
         f'Not enough seeds saved to perform {trials} trials (max {len(seeds)})'
 
     seeds = set(seeds[:trials])
