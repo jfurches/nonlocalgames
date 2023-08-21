@@ -41,6 +41,7 @@ def get_cli_args():
     parser.add_argument('--dpo-tol', type=float, default=1e-6)
     parser.add_argument('--adapt-tol', type=float, default=1e-3)
     parser.add_argument('--constrained', action='store_true')
+    parser.add_argument('--phi-tol', type=float, default=1e-5)
     args = parser.parse_args()
     return args
 
@@ -64,7 +65,7 @@ def create_trials(args: argparse.Namespace):
         seed: str = os.path.splitext(os.path.basename(file))[0]
         seed = int(seed)
         already_done.add(seed)
-    
+
     remaining = seeds.difference(already_done)
 
     task_args = list(map(
@@ -72,7 +73,8 @@ def create_trials(args: argparse.Namespace):
                            weighting=args.weighting,
                            dpo_tol=args.dpo_tol,
                            adapt_tol=args.adapt_tol,
-                           constrain_phi=args.constrained),
+                           constrain_phi=args.constrained,
+                           phi_tol=args.phi_tol),
         remaining
     ))
 
@@ -97,8 +99,8 @@ def main(args: argparse.Namespace):
     print('Loading results from directory')
     other_results = load_results_from_dir()
     print(f'Loaded {len(other_results)} results')
-    results = set(results)
-    results |= set(other_results)
+    results: set = set(results)
+    results.update(other_results)
     results = list(results)
 
     phi_shape = results[0].metadata.ham().desired_shape
@@ -132,7 +134,7 @@ def load_results_from_dir():
     for file in glob.glob(os.path.join(TMPDIR, '*.pkl')):
         with open(file, 'rb') as f:
             results.append(pkl.load(f))
-    
+
     return results
 
 @dataclass
@@ -141,6 +143,7 @@ class TaskArgs:
     weighting: str | None = None
     dpo_tol: float = 1e-6
     adapt_tol: float = 1e-3
+    phi_tol: float = 1e-5
     constrain_phi: bool = True
 
     def ham(self):
@@ -165,6 +168,9 @@ class TaskResult:
     def __hash__(self):
         return self.metadata.seed
 
+    def __eq__(self, other):
+        return self.metadata.seed == other.metadata.seed
+
 
 def task(args: TaskArgs) -> TaskResult:
     seed = args.seed
@@ -176,7 +182,8 @@ def task(args: TaskArgs) -> TaskResult:
         seed=seed,
         tol=args.dpo_tol,
         save_mutual_information=True,
-        adapt_thresh=args.adapt_tol)
+        adapt_thresh=args.adapt_tol,
+        phi_tol=args.phi_tol)
 
     for iter_ in range(len(metrics['energy'])):
         record = {

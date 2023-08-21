@@ -22,7 +22,10 @@
                 "--num-cpus=1",
                 "--trials=1",
                 "--seeds=data/seeds.txt",
-                "--constrained"
+                "--constrained",
+                "--adapt-tol=1e-5",
+                "--phi-tol=1e-5",
+                "--dpo-tol=1e-9"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

@@ -24,6 +24,7 @@ def dual_phase_optim(
         verbose = 0,
         tol = 1e-5,
         seed = None,
+        phi_tol = 1e-5,
         **adapt_opt):
     '''Performs dual-phase optimization on a hamiltonian whose ground state represents
     the optimal settings for a non local game
@@ -116,6 +117,7 @@ def dual_phase_optim(
         metrics.setdefault('adapt_pool_gradmax', [0]).append(info['grad_max'])
 
         if verbose >= 2:
+            print('Energy:', shared_state.curr_energy)
             print('Theta:', theta)
             print('Gates:', [ham.pool.get_operators()[i] for i in shared_state.pool_idx])
             print('Optimizing phi')
@@ -127,6 +129,12 @@ def dual_phase_optim(
             ham.params = phi
             E = (bra @ ham.mat @ ket).item().real
             return E
+
+        def get_variance(phi):
+            ham.params = phi
+            E = get_energy(phi)
+            E2 = (bra @ ham.mat @ ham.mat @ ket).item().real
+            return E2 - E ** 2
 
         # We can save this before the phi optimization since
         # that won't change the MI of our shared state.
@@ -151,11 +159,12 @@ def dual_phase_optim(
         #     last_phi = res.x
 
         kwargs = {
-            'method': adam,
+            'method': 'BFGS',
             'options': {
-                'gtol': 1e-5,
+                'gtol': phi_tol,
                 'norm': np.inf,
-                'maxiter': 1000
+                'maxiter': 1000,
+                # 'learning_rate': 0.1
             }
         }
         res = minimize(get_energy,
@@ -173,6 +182,7 @@ def dual_phase_optim(
             if verbose >= 2:
                 print(res)
                 print('New phi:', phi)
+                print('Variance:', get_variance(phi))
             print('Energy:', new_ineq_value)
             print()
         iter_ += 1
@@ -240,7 +250,7 @@ def adam(
             success = True
             break
 
-        if callback and callback(res):
+        if callback and callback(x):
             break
 
         m = (1 - beta1) * g + beta1 * m  # first  moment estimate.
