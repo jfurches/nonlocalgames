@@ -81,6 +81,7 @@ def create_trials(args: argparse.Namespace):
 def main(args: argparse.Namespace):
     cpus = args.num_cpus
     task_args = create_trials(args)
+    phi_shape = task_args[0].ham().desired_shape
 
     os.makedirs('data', exist_ok=True)
 
@@ -107,7 +108,7 @@ def main(args: argparse.Namespace):
             with open('data/g14_state.json', 'w', encoding='utf-8') as f:
                 json.dump({
                     'state': result.state,
-                    'phi': result.phi.reshape(2, 14, 2).tolist(),
+                    'phi': result.phi.reshape(phi_shape).tolist(),
                     'metrics': result.metrics
                 }, f, cls=NumpyEncoder)
 
@@ -126,6 +127,12 @@ class TaskArgs:
     adapt_tol: float = 1e-3
     constrain_phi: bool = True
 
+    def ham(self):
+        return G14(
+            weighting=self.weighting,
+            measurement_layer='ry',
+            constrain_phi=self.constrain_phi
+        )
 
 @dataclass
 class TaskResult:
@@ -143,7 +150,7 @@ class TaskResult:
 def task(args: TaskArgs) -> TaskResult:
     seed = args.seed
     records = []
-    ham = G14(weighting=args.weighting)
+    ham = args.ham()
     state, phi, metrics = methods.dual_phase_optim(
         ham,
         verbose=0,
