@@ -156,7 +156,8 @@ def dual_phase_optim(
             # 'jac': gradient,
             # 'callback': callback
             'options': {
-                'gtol': 1e-6,
+                'gtol': 1e-5,
+                'norm': np.inf
                 # 'maxiter': 1000
             }
         }
