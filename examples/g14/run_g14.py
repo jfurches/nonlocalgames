@@ -81,7 +81,6 @@ def create_trials(args: argparse.Namespace):
 def main(args: argparse.Namespace):
     cpus = args.num_cpus
     task_args = create_trials(args)
-    phi_shape = task_args[0].ham().desired_shape
 
     os.makedirs('data', exist_ok=True)
 
@@ -99,7 +98,10 @@ def main(args: argparse.Namespace):
     other_results = load_results_from_dir()
     print(f'Loaded {len(other_results)} results')
     results = set(results)
-    results.add(other_results)
+    results |= other_results
+    results = list(results)
+
+    phi_shape = results[0].metadata.ham().desired_shape
 
     print('Postprocessing')
     dataframes = []
