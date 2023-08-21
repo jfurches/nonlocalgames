@@ -166,7 +166,7 @@ def dual_phase_optim(
 
         # Get our optimization results
         if not res.success:
-            raise RuntimeWarning('Phi optimization did not converge:', res.message, repr(res))
+            raise RuntimeWarning('Phi optimization did not converge:', res.message, res)
 
         phi: np.ndarray = res.x
         new_ineq_value = res.fun
