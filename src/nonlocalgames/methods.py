@@ -5,6 +5,7 @@ import functools
 
 import numpy as np
 from scipy.optimize import minimize, OptimizeResult
+from scipy.optimize._optimize import _prepare_scalar_function
 from scipy.sparse import csc_matrix
 from openfermion import SymbolicOperator
 
@@ -150,15 +151,11 @@ def dual_phase_optim(
         #     last_phi = res.x
 
         kwargs = {
-            # Minimize phi while fixing phi_a0 to 0
-            # 'constraints': ({'type': 'eq', 'fun': lambda x: x[0]},),
-            'method': 'BFGS',
-            # 'jac': gradient,
-            # 'callback': callback
+            'method': adam,
             'options': {
                 'gtol': 1e-5,
-                'norm': np.inf
-                # 'maxiter': 1000
+                'norm': np.inf,
+                'maxiter': 1000
             }
         }
         res = minimize(get_energy,
@@ -205,3 +202,59 @@ def mutual_information(ket: csc_matrix):
     d = int(np.sqrt(ket.shape[0]))
     statevector = Statevector(ket, dims=(d, d))
     return qiskit_mi(statevector)
+
+# Taken from https://gist.github.com/jcmgray/e0ab3458a252114beecb1f4b631e19ab
+def adam(
+    fun,
+    x0,
+    jac,
+    args=(),
+    learning_rate=0.001,
+    beta1=0.9,
+    beta2=0.999,
+    eps=1e-8,
+    startiter=0,
+    maxiter=1000,
+    gtol=1e-5,
+    norm=np.inf,
+    callback=None,
+    **kwargs
+):
+    """``scipy.optimize.minimize`` compatible implementation of ADAM -
+    [http://arxiv.org/pdf/1412.6980.pdf].
+    Adapted from ``autograd/misc/optimizers.py``.
+    """
+    x = x0
+    m = np.zeros_like(x)
+    v = np.zeros_like(x)
+
+    sf = _prepare_scalar_function(fun, x0, jac=jac, args=args, epsilon=eps)
+    f = sf.fun
+    grad = sf.grad
+
+    success = False
+    for i in range(startiter, startiter + maxiter):
+        g = grad(x)
+
+        if np.linalg.norm(g, ord=norm) < gtol:
+            success = True
+            break
+
+        if callback and callback(res):
+            break
+
+        m = (1 - beta1) * g + beta1 * m  # first  moment estimate.
+        v = (1 - beta2) * (g**2) + beta2 * v  # second moment estimate.
+        mhat = m / (1 - beta1**(i + 1))  # bias correction.
+        vhat = v / (1 - beta2**(i + 1))
+        x = x - learning_rate * mhat / (np.sqrt(vhat) + eps)
+
+    i += 1
+    if success:
+        res = OptimizeResult(x=x, fun=f(x), jac=g, nit=i, nfev=i, success=success)
+    else:
+        # Max iteration achieved
+        res = OptimizeResult(x=x, fun=f(x), jac=g, nit=i, nfev=i, success=success,
+                            message='Maximum iterations reached')
+        
+    return res

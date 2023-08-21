@@ -11,6 +11,21 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "Run G14",
+            "type": "python",
+            "request": "launch",
+            "program": "examples/g14/run_g14.py",
+            "args":[
+                "--weighting=balanced",
+                "--num-cpus=1",
+                "--trials=1",
+                "--seeds=data/seeds.txt",
+                "--constrained"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

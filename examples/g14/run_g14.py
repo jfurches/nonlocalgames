@@ -7,7 +7,7 @@ import os
 import pickle as pkl
 import sys
 from dataclasses import dataclass
-from typing import Any, Dict, Sequence
+from typing import Any, Sequence
 import shutil
 
 import gymnasium as gym
