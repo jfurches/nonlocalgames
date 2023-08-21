@@ -98,7 +98,7 @@ def main(args: argparse.Namespace):
     other_results = load_results_from_dir()
     print(f'Loaded {len(other_results)} results')
     results = set(results)
-    results |= other_results
+    results |= set(other_results)
     results = list(results)
 
     phi_shape = results[0].metadata.ham().desired_shape
