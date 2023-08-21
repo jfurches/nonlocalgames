@@ -40,6 +40,7 @@ def get_cli_args():
     parser.add_argument('-n', '--trials', type=int, default=None)
     parser.add_argument('--dpo-tol', type=float, default=1e-6)
     parser.add_argument('--adapt-tol', type=float, default=1e-3)
+    parser.add_argument('--constrained', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -70,7 +71,8 @@ def create_trials(args: argparse.Namespace):
         lambda s: TaskArgs(s,
                            weighting=args.weighting,
                            dpo_tol=args.dpo_tol,
-                           adapt_tol=args.adapt_tol),
+                           adapt_tol=args.adapt_tol,
+                           constrain_phi=args.constrained),
         remaining
     ))
 
@@ -122,6 +124,7 @@ class TaskArgs:
     weighting: str | None = None
     dpo_tol: float = 1e-6
     adapt_tol: float = 1e-3
+    constrain_phi: bool = True
 
 
 @dataclass
@@ -130,6 +133,7 @@ class TaskResult:
     state: Sequence[Any]
     phi: np.ndarray
     metrics: dict
+    metadata: TaskArgs
 
     @property
     def energy(self):
@@ -161,7 +165,7 @@ def task(args: TaskArgs) -> TaskResult:
         records.append(record)
 
     df = pd.DataFrame.from_records(records)
-    result = TaskResult(df, state, phi, metrics)
+    result = TaskResult(df, state, phi, metrics, args)
 
     # Dump to temporary directory
     with open(os.path.join(TMPDIR, f'{seed}.pkl'), 'wb') as f:

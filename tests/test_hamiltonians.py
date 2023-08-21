@@ -14,7 +14,8 @@ from nonlocalgames.hamiltonians import (
 
 from nonlocalgames.qinfo import (
     is_hermitian, is_diagonal, 
-    commutator, is_antihermitian
+    commutator, is_antihermitian,
+    Ry, tensor
 )
 
 class TestHamiltonians:
@@ -126,13 +127,27 @@ class TestG14:
             else:
                 assert np.allclose(pcc @ psi, 0, rtol=0)
     
-    @pytest.mark.parametrize('seed', range(10))
-    def test_g14_properties(self, seed):
-        ham = G14(init_mode='normal')
+    @pytest.mark.parametrize('seed,constrain,layer', itertools.product(
+            range(5),
+            (True, False),
+            ('ry', 'u3')
+    ))
+    def test_g14_properties(self, seed, constrain, layer):
+        ham = G14(init_mode='normal', constrain_phi=constrain, measurement_layer=layer)
         ham.init(seed=seed)
 
         assert ham.mat.shape == (16, 16)
         assert is_hermitian(ham.mat)
+
+        if layer == 'ry':
+            base_shape = (14, 2, 1)
+        elif layer == 'u3':
+            base_shape = (14, 2, 3)
+
+        if constrain:
+            assert ham.desired_shape == base_shape
+        else:
+            assert ham.desired_shape == (2, *base_shape)
 
     @pytest.mark.parametrize('seed', range(10))
     def test_seeding(self, seed):
@@ -145,3 +160,12 @@ class TestG14:
         mat2 = ham.mat
 
         assert np.allclose(mat1, mat2)
+    
+    def test_conj(self):
+        phi = np.random.uniform(-np.pi, np.pi, size=2)
+        Uv = np.kron(Ry(phi[0]), Ry(phi[1]))
+        
+        # Bob's operator must be conj of Alice's, and therefore
+        # must be real
+        assert np.allclose(Uv, Uv.conj())
+        assert np.all(np.isreal(Uv))

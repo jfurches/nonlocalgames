@@ -24,6 +24,9 @@ def is_diagonal(op: ArrayType) -> bool:
     else:
         return (op - op.todia()).nnz == 0
 
+def is_unitary(op: ArrayType) -> bool:
+    return np.allclose(op.T.conj() @ op, np.eye(op.shape[0]))
+
 def tensor_i(A: ArrayType, i: int, N: int) -> ArrayType:
     '''Returns the full operator ⊗_{j != i} Ij ⊗ Ai
     
