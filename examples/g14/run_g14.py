@@ -95,6 +95,12 @@ def main(args: argparse.Namespace):
             file=sys.stdout
         ))
 
+    print('Loading results from directory')
+    other_results = load_results_from_dir()
+    print(f'Loaded {len(other_results)} results')
+    results = set(results)
+    results.add(other_results)
+
     print('Postprocessing')
     dataframes = []
     best_energy = np.inf
@@ -118,6 +124,14 @@ def main(args: argparse.Namespace):
 
     # Cleanup intermediate results directory
     shutil.rmtree(TMPDIR)
+
+def load_results_from_dir():
+    results = []
+    for file in glob.glob(os.path.join(TMPDIR, '*.pkl')):
+        with open(file, 'rb') as f:
+            results.append(pkl.load(f))
+    
+    return results
 
 @dataclass
 class TaskArgs:
@@ -145,6 +159,9 @@ class TaskResult:
     @property
     def energy(self):
         return self.df.energy.min()
+
+    def __hash__(self):
+        return self.metadata.seed
 
 
 def task(args: TaskArgs) -> TaskResult:
