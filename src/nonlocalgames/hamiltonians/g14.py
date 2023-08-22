@@ -152,6 +152,10 @@ class G14(NLGHamiltonian):
         for e in edges:
             sp_ham += we * M(*e)
         
+        if self._ham_type == 'nonviolation':
+            Q = len(vertices) + len(edges)
+            sp_ham *= -1 / Q
+        
         return sp_ham
 
     @cached_property

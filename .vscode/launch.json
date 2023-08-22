@@ -18,14 +18,15 @@
             "request": "launch",
             "program": "examples/g14/run_g14.py",
             "args":[
-                "--weighting=balanced",
+                // "--weighting=balanced",
                 "--num-cpus=1",
                 "--trials=1",
                 "--seeds=data/seeds.txt",
                 "--constrained",
-                "--adapt-tol=1e-5",
-                "--phi-tol=1e-5",
-                "--dpo-tol=1e-9"
+                "--adapt-tol=1e-6",
+                "--phi-tol=1e-6",
+                "--dpo-tol=1e-9",
+                "--type=nonviolation"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

@@ -42,6 +42,7 @@ def get_cli_args():
     parser.add_argument('--adapt-tol', type=float, default=1e-3)
     parser.add_argument('--constrained', action='store_true')
     parser.add_argument('--phi-tol', type=float, default=1e-5)
+    parser.add_argument('--type', default='violation')
     args = parser.parse_args()
     return args
 
@@ -74,7 +75,8 @@ def create_trials(args: argparse.Namespace):
                            dpo_tol=args.dpo_tol,
                            adapt_tol=args.adapt_tol,
                            constrain_phi=args.constrained,
-                           phi_tol=args.phi_tol),
+                           phi_tol=args.phi_tol,
+                           type=args.type),
         remaining
     ))
 
@@ -145,12 +147,14 @@ class TaskArgs:
     adapt_tol: float = 1e-3
     phi_tol: float = 1e-5
     constrain_phi: bool = True
+    type: str = 'violation'
 
     def ham(self):
         return G14(
             weighting=self.weighting,
             measurement_layer='ry',
-            constrain_phi=self.constrain_phi
+            constrain_phi=self.constrain_phi,
+            ham_type=self.type
         )
 
 @dataclass
@@ -178,7 +182,7 @@ def task(args: TaskArgs) -> TaskResult:
     ham = args.ham()
     state, phi, metrics = methods.dual_phase_optim(
         ham,
-        verbose=0,
+        verbose=2,
         seed=seed,
         tol=args.dpo_tol,
         save_mutual_information=True,

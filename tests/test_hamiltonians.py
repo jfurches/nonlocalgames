@@ -101,6 +101,7 @@ class TestG14:
         assert graph.nodes.shape[0] == 14
         assert graph.edge_links.min() == 0
         assert graph.edge_links.max() == 13
+        assert len(graph.edge_links) == 37 * 2
 
         # Check apex vertex
         for v in range(13):

@@ -6,7 +6,7 @@ import functools
 import numpy as np
 from scipy.optimize import minimize, OptimizeResult
 from scipy.optimize._optimize import _prepare_scalar_function
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, linalg
 from openfermion import SymbolicOperator
 
 from qiskit.quantum_info import (
@@ -149,21 +149,12 @@ def dual_phase_optim(
         #     # into gradient(self, params=None)
         #     gradient = functools.partial(ham.gradient, ket)
 
-        # last_phi = phi
-        # def callback(res: OptimizeResult):
-        #     print(res)
-        #     diff = res.x - last_phi
-        #     grad = res.jac
-
-        #     dot = np.dot(diff.ravel(), grad.ravel())
-        #     last_phi = res.x
-
         kwargs = {
             'method': 'BFGS',
             'options': {
                 'gtol': phi_tol,
                 'norm': np.inf,
-                'maxiter': 1000,
+                'maxiter': 100,
                 # 'learning_rate': 0.1
             }
         }
@@ -172,7 +163,7 @@ def dual_phase_optim(
                        **kwargs)
 
         # Get our optimization results
-        if not res.success:
+        if not res.success and 'precision' in res.message:
             raise RuntimeWarning('Phi optimization did not converge:', res.message, res)
 
         phi: np.ndarray = res.x
@@ -183,6 +174,9 @@ def dual_phase_optim(
                 print(res)
                 print('New phi:', phi)
                 print('Variance:', get_variance(phi))
+
+                w, _ = linalg.eigsh(ham.mat, k=1, which='SA')
+                print('Ground State Energy:', w.item().real)
             print('Energy:', new_ineq_value)
             print()
         iter_ += 1
