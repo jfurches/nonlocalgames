@@ -47,7 +47,11 @@ def from_ket_form(counts: Dict[str, T]) -> Dict[Tuple[int], T]:
 
     return postprocessed
 
-def draw_graph(G: nx.Graph, cmap: str | Colormap = 'PiYG'):
+def draw_graph(G: nx.Graph,
+               cmap: str | Colormap = 'PiYG',
+               initial_pos = None,
+               vmin = None,
+               vmax = None):
     '''Draws a graph and colors the nodes and vertices based on the `weight` attribute.
     
     Args:
@@ -64,14 +68,17 @@ def draw_graph(G: nx.Graph, cmap: str | Colormap = 'PiYG'):
     node_colors = list(map(lambda it: it[-1], G.nodes.data('weight')))
     edge_colors = list(map(lambda it: it[-1], G.edges.data('weight')))
 
-    vmin, vmax = min([*node_colors, *edge_colors]), max([*node_colors, *edge_colors])
+    vmin = vmin or min([*node_colors, *edge_colors])
+    vmax = vmax or max([*node_colors, *edge_colors])
+    scaled = (np.array(node_colors) - vmin) / (vmax - vmin)
+    bordercolors = cmap(np.clip(scaled, 0, 1))
 
-    pos = nx.kamada_kawai_layout(G)
+    pos = nx.kamada_kawai_layout(G, weight=None, pos=initial_pos)
     nodes: PathCollection = nx.draw_networkx_nodes(
         G,
         pos,
         node_color='white',
-        edgecolors=cmap(node_colors),
+        edgecolors=bordercolors,
         node_size=500,
     )
     edges: LineCollection = nx.draw_networkx_edges(

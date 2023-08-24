@@ -19,12 +19,18 @@ with warnings.catch_warnings():
     from qiskit.quantum_info import Pauli
     from qiskit.circuit import ParameterVector, Parameter
     from qiskit.circuit.library import PauliEvolutionGate
-    from qiskit_aer import AerSimulator
+    from qiskit.providers import Backend, JobV1
+    from qiskit.providers.exceptions import JobTimeoutError
+    from qiskit.result import Result
+    from qiskit_aer import AerSimulator, AerJob
     from qiskit_aer.library import SaveStatevector
 
 from openfermion import QubitOperator
 from adaptgym.util import circuit
 from nonlocalgames import util
+
+Question = Sequence[int]
+Counts = Dict[str, int]
 
 @dataclass
 class NLGCircuit:
@@ -62,7 +68,7 @@ class NLGCircuit:
     phi: np.ndarray
 
     save_statevector: bool = field(default=False)
-    sim: AerSimulator = field(default=None, kw_only=True)
+    sim: Backend = field(default=None, kw_only=True)
 
     # Layer of rotation gates at the end that we'll construct
     measurement_params: ParameterVector = field(default=None, init=False)
@@ -103,32 +109,59 @@ class NLGCircuit:
             self.qc.measure(qreg, creg)
         
     def ask(self,
-            q: Sequence[int],
+            q: Question| Sequence[Question],
             return_statevector = False,
+            timeout: float = None,
             **run_options):
         '''Query the players with a vector of n questions.
         
         Args:
             q: Sequence of questions for each player
-            run_options: Keyword arguments passed to AerSimulator.run
+            run_options: Keyword arguments passed to `Backend.run`
         
         Returns:
             A dict of counts with the keys being a tuple of each player's response, e.g.
                 `{(a1, a2, ..., an): count}`.
         '''
+        try:
+            eval_qc = list(map(self._prepare_question, q))
+        except TypeError:   # int object is not iterable
+            eval_qc = self._prepare_question(q)
 
+        job = self._submit_job(eval_qc, **run_options)
+        try:
+            if not isinstance(job, AerJob):
+                job.wait_for_final_state(timeout=timeout)
+            result: Result = job.result()
+            return self._transform_results(result, return_statevector=return_statevector)
+            
+        except JobTimeoutError:
+            return job
+    
+    def _prepare_question(self, q: Question) -> QuantumCircuit:
         phi = np.concatenate([self.phi[i, qi] for i, qi in enumerate(q)])
         eval_qc = self.transpiled.bind_parameters({self.measurement_params: phi})
+        eval_qc.metadata['question'] = q
+        return eval_qc
+    
+    def _transform_results(self, result: Result, return_statevector = False):
+        counts: Counts | Sequence[Counts] = result.get_counts()
+        if isinstance(counts, dict):
+            counts = util.from_ket_form(counts)
 
-        job = self.sim.run(eval_qc, **run_options)
-        result = job.result()
-        counts: Dict[str, int] = result.get_counts()
-        counts = util.from_ket_form(counts)
-        
-        if return_statevector:
-            return counts, result.get_statevector()
+            if return_statevector:
+                return counts, result.get_statevector()
+        else:
+            counts = list(map(util.from_ket_form, counts))
 
         return counts
+    
+    def _submit_job(self,
+                    qc: QuantumCircuit | Sequence[QuantumCircuit],
+                    **run_options) -> JobV1:
+
+        job = self.sim.run(qc, **run_options)
+        return job
 
     @cached_property
     def transpiled(self):
