@@ -174,6 +174,10 @@ def load_adapt_ansatz(
         full_qreg
     )
 
+    # Make reference kets prettier if they're in standard basis like |+>
+    if isinstance(ref_ket, str):
+        qc = qc.decompose(reps=2)
+
     # adapt_order means the parameters are stored in [tN, tN-1, ..., t1]
     iter_ = reversed(state) if adapt_order else state
     for idx, (theta, qubit_op_str) in enumerate(iter_):
