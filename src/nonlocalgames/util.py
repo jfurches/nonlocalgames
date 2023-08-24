@@ -83,7 +83,12 @@ def draw_graph(G: nx.Graph, cmap: str | Colormap = 'PiYG'):
         edge_vmax=vmax,
         width=2,
     )
-    nx.draw_networkx_labels(G, pos, {n: str(n) for n in G}, font_color="black")
+
+    labels = G.nodes.data('label')
+    for n, label in labels:
+        if label is None:
+            G.nodes[n]['label'] = str(n)
+    nx.draw_networkx_labels(G, pos, dict(G.nodes.data('label')), font_color="black")
     edges.set_array(edge_colors)
 
     ax = plt.gca()
