@@ -1,5 +1,7 @@
 from functools import partial
 from typing import Dict, Tuple, TypeVar
+from queue import PriorityQueue
+from collections import namedtuple
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -79,6 +81,7 @@ def draw_graph(G: nx.Graph,
         pos,
         node_color='white',
         edgecolors=bordercolors,
+        linewidths=2,
         node_size=500,
     )
     edges: LineCollection = nx.draw_networkx_edges(
@@ -102,3 +105,38 @@ def draw_graph(G: nx.Graph,
     ax.set_axis_off()
     plt.colorbar(edges, ax=ax)
     return ax
+
+def df_to_graph(df: pd.DataFrame, labels = None) -> nx.Graph:
+    G = nx.Graph()
+    q = PriorityQueue()
+    Row = namedtuple('Row', ['va', 'vb', 'win_rate'])
+
+    # First we queue up everything
+    for _, series in df.iterrows():
+        row = Row(series.va, series.vb, series.win_rate)
+        # Lower priority for edges
+        priority = int(series.va != series.vb)
+        q.put((priority, row))
+    
+    # Now pop from the queue. All edges should be
+    # at the end of the queue, so we draw vertices
+    # first
+    while not q.empty():
+        _, row = q.get()
+        va, vb = row.va, row.vb
+        win_rate = row.win_rate
+
+        if va == vb:
+            G.add_node(va, weight=win_rate)
+        else:
+            if G.has_edge(vb, va):
+                w = G.edges[vb, va]['weight']
+                G.edges[vb, va]['weight'] = min(win_rate, w)
+            else:
+                G.add_edge(va, vb, weight=win_rate)
+    
+    if labels is not None:
+        for n, label in enumerate(labels):
+            G.nodes[n]['label'] = label
+
+    return G
