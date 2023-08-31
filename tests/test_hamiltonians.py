@@ -1,20 +1,27 @@
 import warnings
+import itertools
 import pytest
 
 import numpy as np
 from scipy.sparse import SparseEfficiencyWarning
 from scipy.linalg import eigvalsh
 
-from nonlocalgames.hamiltonians import CHSHHamiltonian, NPartiteSymmetricNLG
+from nonlocalgames.hamiltonians import (
+    CHSHHamiltonian,
+    NPartiteSymmetricNLG,
+    G14
+)
+
 from nonlocalgames.qinfo import (
     is_hermitian, is_diagonal, 
-    commutator, is_antihermitian
+    commutator, is_antihermitian,
+    Ry, tensor
 )
 
 class TestHamiltonians:
     @pytest.mark.parametrize('mode', ['optimal', 'normal'])
     def test_chsh(self, mode: str):
-        ham = CHSHHamiltonian(initialize_mode=mode)
+        ham = CHSHHamiltonian(init_mode=mode)
         ham.init()
 
         assert is_hermitian(ham.mat)
@@ -24,6 +31,19 @@ class TestHamiltonians:
             w = eigvalsh(ham.mat)
             min_eigval = min(w.real)
             assert np.isclose(min_eigval, -2*np.sqrt(2))
+        elif mode == 'normal':
+            # Check that seeding produces the same hamiltonian
+            ham.init(seed=42)
+            mat1 = ham.mat
+            params1 = ham.params
+
+            ham = CHSHHamiltonian(init_mode=mode)
+            ham.init(seed=42)
+            mat2 = ham.mat
+            params2 = ham.params
+
+            assert np.allclose(mat1, mat2, rtol=0)
+            assert np.allclose(params1, params2, rtol=0)
 
     @pytest.mark.parametrize('n', [2,3,4,5])
     def test_Npartite(self, n: int, trials=5):
@@ -71,3 +91,82 @@ class TestHamiltonians:
                 # Make sure some operator has nonzero gradient since the 
                 # probability we chose optimal parameters is 0
                 assert not np.allclose(grads, 0)
+
+
+class TestG14:
+    def test_g14_graph(self):
+        graph = G14._get_graph()
+
+        # Check node values
+        assert graph.nodes.shape[0] == 14
+        assert graph.edge_links.min() == 0
+        assert graph.edge_links.max() == 13
+        assert len(graph.edge_links) == 37 * 2
+
+        # Check apex vertex
+        for v in range(13):
+            assert (13, v) in graph.edge_links
+        
+        # Check bidirectional edges
+        for edge in graph.edge_links:
+            assert edge[::-1] in graph.edge_links
+
+    def test_g14_pcc(self):
+        pcc = G14._pcc(4)
+        assert pcc.nnz == 4
+
+        for c1, c2 in itertools.product(range(G14.chi_q), repeat=2):
+            v1 = np.zeros(4)
+            v2 = np.zeros(4)
+            v1[c1] = 1
+            v2[c2] = 1
+
+            psi = np.kron(v1, v2)
+
+            if c1 == c2:
+                assert np.allclose(pcc @ psi, psi, rtol=0)
+            else:
+                assert np.allclose(pcc @ psi, 0, rtol=0)
+    
+    @pytest.mark.parametrize('seed,constrain,layer', itertools.product(
+            range(5),
+            (True, False),
+            ('ry', 'u3')
+    ))
+    def test_g14_properties(self, seed, constrain, layer):
+        ham = G14(init_mode='normal', constrain_phi=constrain, measurement_layer=layer)
+        ham.init(seed=seed)
+
+        assert ham.mat.shape == (16, 16)
+        assert is_hermitian(ham.mat)
+
+        if layer == 'ry':
+            base_shape = (14, 2, 1)
+        elif layer == 'u3':
+            base_shape = (14, 2, 3)
+
+        if constrain:
+            assert ham.desired_shape == base_shape
+        else:
+            assert ham.desired_shape == (2, *base_shape)
+
+    @pytest.mark.parametrize('seed', range(10))
+    def test_seeding(self, seed):
+        ham = G14(init_mode='normal')
+        ham.init(seed=seed)
+        mat1 = ham.mat
+
+        ham = G14(init_mode='normal')
+        ham.init(seed=seed)
+        mat2 = ham.mat
+
+        assert np.allclose(mat1, mat2)
+    
+    def test_conj(self):
+        phi = np.random.uniform(-np.pi, np.pi, size=2)
+        Uv = np.kron(Ry(phi[0]), Ry(phi[1]))
+        
+        # Bob's operator must be conj of Alice's, and therefore
+        # must be real
+        assert np.allclose(Uv, Uv.conj())
+        assert np.all(np.isreal(Uv))

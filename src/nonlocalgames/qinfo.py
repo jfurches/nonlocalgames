@@ -24,6 +24,9 @@ def is_diagonal(op: ArrayType) -> bool:
     else:
         return (op - op.todia()).nnz == 0
 
+def is_unitary(op: ArrayType) -> bool:
+    return np.allclose(op.T.conj() @ op, np.eye(op.shape[0]))
+
 def tensor_i(A: ArrayType, i: int, N: int) -> ArrayType:
     '''Returns the full operator ⊗_{j != i} Ij ⊗ Ai
     
@@ -80,5 +83,14 @@ Z = np.array([
 ])
 
 Rx = lambda t: np.cos(t/2) * I - 1j * np.sin(t/2) * X
+'''X-axis rotation consistent with qiskit'''
 Ry = lambda t: np.cos(t/2) * I - 1j * np.sin(t/2) * Y
+'''Y-axis rotation consistent with qiskit'''
 Rz = lambda t: np.cos(t/2) * I - 1j * np.sin(t/2) * Z
+'''Z-axis rotation consistent with qiskit'''
+
+U3 = lambda t, p, l: np.array([
+    [np.cos(t/2),               -np.exp(1j*l)*np.sin(t/2)],
+    [np.exp(1j*p)*np.sin(t/2),  np.exp(1j*(p + l)) * np.cos(t/2)]
+])
+'''General single-qubit unitary gate'''

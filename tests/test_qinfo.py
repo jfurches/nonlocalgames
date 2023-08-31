@@ -38,6 +38,14 @@ class TestRotations:
             assert np.allclose(Ry(-phi), Ry(phi).conj().T)
             assert np.allclose(Ry(-phi) @ Ry(phi), np.eye(2, dtype=complex))
     
+    @pytest.mark.parametrize('seed', range(10))
+    def test_u3(self, seed):
+        np_random = np.random.default_rng(seed)
+        phi = np_random.uniform(-np.pi, np.pi, size=3)
+        U = U3(*phi)
+
+        assert is_unitary(U)
+    
 class TestMeasurement:
     @pytest.mark.parametrize('n', [1,2,3,4,5])
     def test_Miq(self, n, trials=5):
