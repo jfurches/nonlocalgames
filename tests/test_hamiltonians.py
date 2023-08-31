@@ -147,7 +147,7 @@ class TestG14:
         elif layer == 'cnotry':
             base_shape = (players, 14, 2, 2)
         elif layer == 'u10':
-            base_shape = (players, 14, 2, 10)
+            base_shape = (players, 14, 2, 5)
 
         assert ham.desired_shape == base_shape
 

@@ -148,6 +148,7 @@ class CnotRyLayer(MeasurementLayer):
         U = U2 @ cnot01 @ U1
         return U
     
+@dataclass
 class U10Layer(MeasurementLayer):
     def __post_init__(self):
         # Initialize the parameters if not given
@@ -177,7 +178,7 @@ class U10Layer(MeasurementLayer):
         # This also has 2 qubits
         U1 = np.kron(
             U3(*self.phi[i, qi, 0, 0:3]),
-            U3(*self.phi[i, qi, 0, 0:3])
+            U3(*self.phi[i, qi, 1, 0:3])
         )
         U2 = np.kron(
             Rx(self.phi[i, qi, 0, 3]) @ Rz(self.phi[i, qi, 0, 4]),
