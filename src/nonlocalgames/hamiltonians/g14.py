@@ -35,20 +35,20 @@ class G14(NLGHamiltonian):
     References:
         [1] https://arxiv.org/abs/1801.03542
     '''
-    # Phi matrix, players x vertices x qubits
-    desired_shape = (2, 14, 2)
     # Optimal quantum coloring
     chi_q = 4
-    _qubits = int(np.ceil(np.log2(chi_q)))
-    _system = 2 * _qubits
+    
+    players = 2
+    questions = 14
+    qubits = int(np.ceil(np.log2(chi_q)))
+
+    _system = 2 * qubits
 
     ham_types = ('violation', 'nonviolation', 'full')
-    measurement_layers = ('ry', 'u3')
 
     def __init__(self,
         ham_type: str = 'violation',
         weighting: str | None = None,
-        measurement_layer = 'ry',
         constrain_phi = True,
         **kwargs):
         '''Construct hamiltonian for G14
@@ -66,18 +66,10 @@ class G14(NLGHamiltonian):
         # Construct parameter shape before calling super init. If constrain_phi
         # is true, then we remove the player dimension from the parameters.
         self._constrain_phi = constrain_phi
-        shape = self.desired_shape[1:] if self._constrain_phi else self.desired_shape
+        if self._constrain_phi:
+            self.players = 1
 
-        # If we use Ry layer, then we need 1 parameter per qubit. For a general parametrized
-        # unitary (U3), we need 3 parameters per qubit.
-        assert measurement_layer in self.measurement_layers
-        self._measurement_layer = measurement_layer
-        if self._measurement_layer == 'u3':
-            self.desired_shape = (*shape, 3)
-        elif self._measurement_layer == 'ry':
-            self.desired_shape = (*shape, 1)
-
-        # Call super __init__ to generate parameter tensor
+        # Call super __init__ to generate measurement layer
         super().__init__(**kwargs)
 
         self._pool = AllPauliPool(qubits=self._system, odd_Y=False)
@@ -92,7 +84,6 @@ class G14(NLGHamiltonian):
 
     def _generate_hamiltonian(self) -> csc_matrix:
         g14 = G14._get_graph()
-        phi = self._params
 
         # Projector onto matching color assignments, full subspace
         pcc = G14._pcc(self._system)
@@ -100,27 +91,20 @@ class G14(NLGHamiltonian):
             pcc = 2 * pcc - np.eye(pcc.shape[0])
         elif self._ham_type == 'nonviolation':
             pcc = np.eye(pcc.shape[0]) - pcc
-        
-        measure_func = U3 if self._measurement_layer == 'u3' else Ry
-
-        if self._constrain_phi:
-            phi_ = lambda i, v: phi[v]
-        else:
-            phi_ = lambda i, v: phi[i, v]
 
         # Measurement operator for equal colors
         def M(*args):
             ops = []
             for i, v in enumerate(args):
-                p = phi_(i, v)
-                op = np.kron(measure_func(*p[0]), measure_func(*p[1]))
-
                 # If we constrain the operators, Bob (1) = Alice.conj()
                 if self._constrain_phi and i == 1:
-                    ops.append(op.conj())
+                    op = self._ml.to_unitary(0, v).conj()
                 else:
-                    ops.append(op)
+                    op = self._ml.to_unitary(i, v)
 
+                ops.append(op)
+
+            # Make tensor product of unitaries for each player
             N = len(args)
             idx = list(range(N))
             U = tensor(ops, idx, N)
@@ -160,7 +144,7 @@ class G14(NLGHamiltonian):
 
     @cached_property
     def ref_ket(self):
-        # Equal superposition state
+        # |+> state
         label = '+' * self._system
         v = Statevector.from_label(label)
         ket = csc_matrix(v.data, dtype=complex).reshape(-1, 1)

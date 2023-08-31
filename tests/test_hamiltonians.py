@@ -128,27 +128,28 @@ class TestG14:
             else:
                 assert np.allclose(pcc @ psi, 0, rtol=0)
     
-    @pytest.mark.parametrize('seed,constrain,layer', itertools.product(
-            range(5),
+    @pytest.mark.parametrize('constrain,layer', itertools.product(
             (True, False),
-            ('ry', 'u3')
+            ('ry', 'u3', 'cnotry', 'u10')
     ))
-    def test_g14_properties(self, seed, constrain, layer):
+    def test_g14_properties(self, constrain, layer):
         ham = G14(init_mode='normal', constrain_phi=constrain, measurement_layer=layer)
-        ham.init(seed=seed)
+        ham.init(seed=42)
 
         assert ham.mat.shape == (16, 16)
         assert is_hermitian(ham.mat)
 
+        players = 1 if constrain else 2
         if layer == 'ry':
-            base_shape = (14, 2, 1)
+            base_shape = (players, 14, 2, 1)
         elif layer == 'u3':
-            base_shape = (14, 2, 3)
+            base_shape = (players, 14, 2, 3)
+        elif layer == 'cnotry':
+            base_shape = (players, 14, 2, 2)
+        elif layer == 'u10':
+            base_shape = (players, 14, 2, 10)
 
-        if constrain:
-            assert ham.desired_shape == base_shape
-        else:
-            assert ham.desired_shape == (2, *base_shape)
+        assert ham.desired_shape == base_shape
 
     @pytest.mark.parametrize('seed', range(10))
     def test_seeding(self, seed):

@@ -10,7 +10,10 @@ from ..qinfo import *
 
 class CHSHHamiltonian(NLGHamiltonian):
     optimal_params: np.ndarray = np.array([0, -np.pi/2, -np.pi/4, np.pi/4])
-    desired_shape = (4,)
+    
+    players = 2
+    questions = 2
+    qubits = 1
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -26,19 +29,15 @@ class CHSHHamiltonian(NLGHamiltonian):
 
     def _generate_hamiltonian(self):
         if self._param_init_mode == 'optimal':
-            self._params = self.optimal_params
+            self._params[:] = self.optimal_params.reshape(self.desired_shape)
 
         sp_ham = csc_matrix((4, 4), dtype=complex)
         for qa, qb in itertools.product((0, 1), repeat=2):
             c = -1 if qa + qb == 2 else 1
-            phia, phib = self._params[qa], self._params[2 + qb]
+            Uq = self._ml.uq((qa, qb))
 
-            # Ry gates for each measurement, decompose using the exponential formula
-            # exp(-itY) = cos(t)I - isin(t)Y
-            Ma = Ry(phia)
-            Mb = Ry(phib)
-
-            M = np.kron(Ma.conj().T @ Z @ Ma, Mb.conj().T @ Z @ Mb)
+            ZZ = np.kron(Z, Z)
+            M = Uq.conj().T @ ZZ @ Uq
             # Use -= to invert the sign in order to make the smallest eigenvalue have the
             # largest inequality violation
             sp_ham -= c * M

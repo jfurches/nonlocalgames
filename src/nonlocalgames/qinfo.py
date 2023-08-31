@@ -94,3 +94,32 @@ U3 = lambda t, p, l: np.array([
     [np.exp(1j*p)*np.sin(t/2),  np.exp(1j*(p + l)) * np.cos(t/2)]
 ])
 '''General single-qubit unitary gate'''
+
+P0 = np.array([
+    [1, 0],
+    [0, 0]],
+    dtype=complex
+)
+
+P1 = np.array([
+    [0, 0],
+    [0, 1]],
+    dtype=complex
+)
+
+Cnot = lambda c, t, n: tensor((P0, I), (c, t), n) + tensor((P1, X), (c, t), n)
+
+cnot01 = Cnot(0, 1, 2)
+def U10(phi):
+    # Phi should have 10 parameters
+
+    # Start with 2 general U3 on each qubit
+    U = np.kron(U3(*phi[0:3]), U3(*phi[3:6]))
+    U = cnot01 @ U
+    # Apply (Rz7Rx6 x Rx9Rz8)
+    U = np.kron(
+        Rz(phi[7]) @ Rx(phi[6]),
+        Rx(phi[9]) @ Rz(phi[8])
+    ) @ U
+
+    return U

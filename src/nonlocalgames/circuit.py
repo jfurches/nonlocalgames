@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Sequence, Tuple, Dict
 from functools import cached_property, reduce
 from string import ascii_lowercase
+from abc import ABC, abstractmethod, abstractproperty
 
 import numpy as np
 
@@ -27,7 +28,8 @@ with warnings.catch_warnings():
 
 from openfermion import QubitOperator
 from adaptgym.util import circuit
-from nonlocalgames import util
+from . import util
+from .measurement import MeasurementLayer
 
 Question = Sequence[int]
 Counts = Dict[str, int]
@@ -69,36 +71,32 @@ class NLGCircuit:
 
     save_statevector: bool = field(default=False)
     sim: Backend = field(default=None, kw_only=True)
+    measurement_layer_type: str = field(default='ry', kw_only=True)
 
     # Layer of rotation gates at the end that we'll construct
     measurement_params: ParameterVector = field(default=None, init=False)
     qc: QuantumCircuit = field(default=None, init=False)
+    measurement_layer: MeasurementLayer = field(default=None, init=False)
 
     def __post_init__(self):
         self.qc = self.shared_state.copy()
-
-        if self.phi.ndim == 2:
-            self.phi = np.expand_dims(self.phi, axis=2)
         
-        players, questions, qubits = self.phi.shape
-        n_phi_params = players * qubits
-        self.measurement_params = ParameterVector('φ', length=n_phi_params)
+        self.measurement_layer = MeasurementLayer.get(
+            self.measurement_layer_type,
+            phi=self.phi
+        )
+        
+        self.measurement_params = ParameterVector('φ', length=self.measurement_layer.n_layer_params)
 
         # Add classical bit registers for each quantum register
         for qreg in self.qregs:
             creg = ClassicalRegister(qreg.size, 'c' + qreg.name)
             self.qc.add_register(creg)
 
-        i = 0
         # Construct measurement layer onto circuit
         # Iterate over players, each has their own qreg and creg
-        for qreg, creg in zip(self.qregs, self.cregs):
-            # Iterate over qubits in each register
-            for _, qubit in enumerate(qreg):
-                # Add y rotations that the players choose based on
-                # the question they receive
-                self.qc.ry(self.measurement_params[i], qubit)
-                i += 1
+        for i, (qreg, creg) in enumerate(zip(self.qregs, self.cregs)):
+            self.measurement_layer.add(i, self.qc, qreg, self.measurement_params)
         
         if self.save_statevector:
             full_qreg = reduce(lambda x, y: x + y[:], self.qregs, [])
@@ -139,7 +137,7 @@ class NLGCircuit:
             return job
     
     def _prepare_question(self, q: Question) -> QuantumCircuit:
-        phi = np.concatenate([self.phi[i, qi] for i, qi in enumerate(q)])
+        phi = self.measurement_layer.map(q)
         eval_qc = self.transpiled.bind_parameters({self.measurement_params: phi})
         eval_qc.metadata['question'] = q
         return eval_qc
@@ -207,7 +205,8 @@ def load_adapt_ansatz(
         full_qreg
     )
 
-    # Make reference kets prettier if they're in standard basis like |+>
+    # Make reference kets prettier if they're in standard basis, like |+>
+    # goes from Initialize(+) to H|0>
     if isinstance(ref_ket, str):
         qc = qc.decompose(reps=2)
 
