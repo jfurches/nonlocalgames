@@ -108,8 +108,9 @@ class G14(NLGHamiltonian):
             N = len(args)
             idx = list(range(N))
             U = tensor(ops, idx, N)
+            Mq = U.T.conj() @ pcc @ U
 
-            return U.T.conj() @ pcc @ U
+            return Mq
 
         d = 2 ** self._system
         sp_ham = csc_matrix((d, d), dtype=complex)

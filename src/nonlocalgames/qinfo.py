@@ -8,13 +8,13 @@ ArrayType = Union[np.ndarray, csc_matrix]
 
 def is_hermitian(op: ArrayType) -> bool:
     if isinstance(op, np.ndarray):
-        return np.all(op.T.conj() == op)
+        return np.allclose(op.T.conj(), op)
     else:
         return (op.conj().transpose() != op).nnz == 0
 
 def is_antihermitian(op: ArrayType) -> bool:
     if isinstance(op, np.ndarray):
-        return np.all(op.T.conj() == -op)
+        return np.allclose(op.T.conj(), -op)
     else:
         return (op.conj().transpose() != -op).nnz == 0
 

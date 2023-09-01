@@ -124,6 +124,7 @@ class TestG14:
     def test_g14_pcc(self):
         pcc = G14._pcc(4)
         assert pcc.nnz == 4
+        assert is_hermitian(pcc)
 
         for c1, c2 in itertools.product(range(G14.chi_q), repeat=2):
             v1 = np.zeros(4)
