@@ -6,7 +6,7 @@ import multiprocessing as mp
 import os
 import pickle as pkl
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Any, Sequence
 import shutil
 
@@ -43,6 +43,7 @@ def get_cli_args():
     parser.add_argument('--constrained', action='store_true')
     parser.add_argument('--phi-tol', type=float, default=1e-5)
     parser.add_argument('--type', default='violation')
+    parser.add_argument('--layer', default='ry')
     args = parser.parse_args()
     return args
 
@@ -121,7 +122,8 @@ def main(args: argparse.Namespace):
                 json.dump({
                     'state': result.state,
                     'phi': result.phi.reshape(phi_shape).tolist(),
-                    'metrics': result.metrics
+                    'metrics': result.metrics,
+                    'metadata': result.metadata.to_dict()
                 }, f, cls=NumpyEncoder)
 
     print('Aggregating results')
@@ -148,14 +150,18 @@ class TaskArgs:
     phi_tol: float = 1e-5
     constrain_phi: bool = True
     type: str = 'violation'
+    layer: str = 'ry'
 
     def ham(self):
         return G14(
             weighting=self.weighting,
-            measurement_layer='ry',
+            measurement_layer=self.layer,
             constrain_phi=self.constrain_phi,
             ham_type=self.type
         )
+    
+    def to_dict(self):
+        return asdict(self)
 
 @dataclass
 class TaskResult:
