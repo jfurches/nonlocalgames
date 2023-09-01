@@ -77,7 +77,8 @@ def create_trials(args: argparse.Namespace):
                            adapt_tol=args.adapt_tol,
                            constrain_phi=args.constrained,
                            phi_tol=args.phi_tol,
-                           type=args.type),
+                           type=args.type,
+                           layer=args.layer),
         remaining
     ))
 
