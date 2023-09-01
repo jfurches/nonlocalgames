@@ -12,6 +12,8 @@ from nonlocalgames.hamiltonians import (
     G14
 )
 
+from nonlocalgames import methods
+
 from nonlocalgames.qinfo import (
     is_hermitian, is_diagonal, 
     commutator, is_antihermitian,
@@ -44,6 +46,14 @@ class TestHamiltonians:
 
             assert np.allclose(mat1, mat2, rtol=0)
             assert np.allclose(params1, params2, rtol=0)
+
+    @pytest.mark.parametrize('layer', ('ry', 'u3'))
+    def test_chsh_dpo(self, layer):
+        ham = CHSHHamiltonian(measurement_layer=layer)
+        *_, metrics = methods.dual_phase_optim(
+            ham, seed=42, tol=1e-5, adapt_thresh=1e-3)
+
+        assert np.isclose(metrics['energy'][-1], -2 * np.sqrt(2))
 
     @pytest.mark.parametrize('n', [2,3,4,5])
     def test_Npartite(self, n: int, trials=5):

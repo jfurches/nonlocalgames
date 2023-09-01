@@ -92,11 +92,11 @@ class NLGHamiltonian(Hamiltonian):
         '''Setter for hamiltonian measurement parameters that regenerates the
         matrix if the parameters change'''
 
-        old_params = self._params
+        same = np.allclose(self.params, params.ravel(), rtol=0, atol=1e-10)
         self._params[:] = params.reshape(self.desired_shape)
 
         # Regenerate the hamiltonian if we changed the parameters
-        if not np.allclose(old_params, self._params, rtol=0, atol=1e-10):
+        if not same:
             self._sp_ham = self._generate_hamiltonian()
 
     @property

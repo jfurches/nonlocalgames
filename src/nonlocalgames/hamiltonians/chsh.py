@@ -31,12 +31,12 @@ class CHSHHamiltonian(NLGHamiltonian):
         if self._param_init_mode == 'optimal':
             self._params[:] = self.optimal_params.reshape(self.desired_shape)
 
+        ZZ = np.kron(Z, Z)
         sp_ham = csc_matrix((4, 4), dtype=complex)
         for qa, qb in itertools.product((0, 1), repeat=2):
             c = -1 if qa + qb == 2 else 1
             Uq = self._ml.uq((qa, qb))
 
-            ZZ = np.kron(Z, Z)
             M = Uq.conj().T @ ZZ @ Uq
             # Use -= to invert the sign in order to make the smallest eigenvalue have the
             # largest inequality violation

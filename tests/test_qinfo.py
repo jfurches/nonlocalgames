@@ -42,9 +42,16 @@ class TestRotations:
     def test_u3(self, seed):
         np_random = np.random.default_rng(seed)
         phi = np_random.uniform(-np.pi, np.pi, size=3)
-        U = U3(*phi)
+        U1 = U3(*phi)
 
-        assert is_unitary(U)
+        phi = np_random.uniform(-np.pi, np.pi, size=3)
+        U2 = U3(*phi)
+
+        assert is_unitary(U1)
+        assert is_unitary(U2)
+
+        assert is_unitary(np.kron(U1, U2))
+        assert is_unitary(np.kron(U2, U1))
     
 class TestMeasurement:
     @pytest.mark.parametrize('n', [1,2,3,4,5])
