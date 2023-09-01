@@ -77,6 +77,14 @@ class MeasurementLayer(ABC):
             return U10Layer(players, questions, qubits, phi=phi)
         elif type_ == 'cnotry':
             return CnotRyLayer(players, questions, qubits, phi=phi)
+    
+    @property
+    def params(self):
+        return self.phi
+    
+    @params.setter
+    def params(self, v: np.ndarray):
+        self.phi[:] = v.reshape(self.phi.shape)
 
 @dataclass
 class SingleQubitLayer(MeasurementLayer):
