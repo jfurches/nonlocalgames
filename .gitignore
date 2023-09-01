@@ -2,3 +2,4 @@
 **/*.egg-info
 
 .aws
+data/tmpdata/**

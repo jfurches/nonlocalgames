@@ -21,6 +21,7 @@ from nonlocalgames.hamiltonians import G14
 gym.logger.set_level(logging.CRITICAL)
 
 TMPDIR = 'tmpdata'
+DATADIR = 'data'
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -48,6 +49,9 @@ def get_cli_args():
     return args
 
 def create_trials(args: argparse.Namespace):
+    TMPDIR = f'{TMPDIR}_{args.layer}'
+    DATADIR = f'{DATADIR}_{args.layer}'
+
     seeds = util.load_seeds(args.seeds)
     trials = args.trials or len(seeds)
 
@@ -88,7 +92,7 @@ def main(args: argparse.Namespace):
     cpus = args.num_cpus
     task_args = create_trials(args)
 
-    os.makedirs(f'data_{args.layer}', exist_ok=True)
+    os.makedirs(DATADIR, exist_ok=True)
 
     print('Starting processing')
     # Call tqdm(pool.imap) to construct a progress bar. We then wrap that
@@ -119,7 +123,7 @@ def main(args: argparse.Namespace):
         if energy < best_energy:
             best_energy = energy
 
-            with open('data/g14_state.json', 'w', encoding='utf-8') as f:
+            with open(f'{DATADIR}/g14_state.json', 'w', encoding='utf-8') as f:
                 json.dump({
                     'state': result.state,
                     'phi': result.phi.reshape(phi_shape).tolist(),
@@ -129,7 +133,7 @@ def main(args: argparse.Namespace):
 
     print('Aggregating results')
     df = pd.concat(dataframes, axis=0, ignore_index=True)
-    df.to_csv('data/g14_trials.csv', index=False)
+    df.to_csv(f'{DATADIR}/g14_trials.csv', index=False)
 
     # Cleanup intermediate results directory
     shutil.rmtree(TMPDIR)
