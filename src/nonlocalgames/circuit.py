@@ -76,16 +76,17 @@ class NLGCircuit:
     # Layer of rotation gates at the end that we'll construct
     measurement_params: ParameterVector = field(default=None, init=False)
     qc: QuantumCircuit = field(default=None, init=False)
-    measurement_layer: MeasurementLayer = field(default=None, init=False)
+    measurement_layer: MeasurementLayer = field(default=None, kw_only=True)
 
     def __post_init__(self):
         self.qc = self.shared_state.copy()
         
-        self.measurement_layer = MeasurementLayer.get(
-            self.measurement_layer_type,
-            phi=self.phi
-        )
-        
+        if self.measurement_layer is None:
+            self.measurement_layer = MeasurementLayer.get(
+                self.measurement_layer_type,
+                phi=self.phi
+            )
+
         self.measurement_params = ParameterVector('φ', length=self.measurement_layer.n_layer_params)
 
         # Add classical bit registers for each quantum register
