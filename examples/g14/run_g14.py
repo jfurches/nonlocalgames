@@ -49,6 +49,7 @@ def get_cli_args():
     return args
 
 def create_trials(args: argparse.Namespace):
+    global TMPDIR, DATADIR
     TMPDIR = f'{TMPDIR}_{args.layer}'
     DATADIR = f'{DATADIR}_{args.layer}'
 
