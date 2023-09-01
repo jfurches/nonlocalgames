@@ -15,6 +15,19 @@ with warnings.catch_warnings():
 
 from .qinfo import *
 
+class LayerRegistry:
+    layers = {}
+
+def register(*names, requires_type=False):
+    def decorator(cls):
+        if not isinstance(cls, type):
+            raise TypeError('Decorator only works on classes')
+    
+        for name in names:
+            LayerRegistry.layers[name] = (cls, requires_type)
+        return cls
+    return decorator
+
 @dataclass
 class MeasurementLayer(ABC):
     '''Utility class for constructing measurement layers and mapping
@@ -70,13 +83,14 @@ class MeasurementLayer(ABC):
 
         if phi is not None:
             players, questions, qubits = phi.shape[:3]
+        
+        # requires_type is used by singlequbitlayer to distinguish ry and u3
+        cls, requires_type = LayerRegistry.layers[type_.lower()]
+        kwargs = {'phi': phi}
+        if requires_type:
+            kwargs['type'] = type_.lower()
 
-        if type_ in ('ry', 'u3'):
-            return SingleQubitLayer(players, questions, qubits, phi=phi, type=type_)
-        elif type_ == 'u10':
-            return U10Layer(players, questions, qubits, phi=phi)
-        elif type_ == 'cnotry':
-            return CnotRyLayer(players, questions, qubits, phi=phi)
+        return cls(players, questions, qubits, **kwargs)
     
     @property
     def params(self):
@@ -85,7 +99,12 @@ class MeasurementLayer(ABC):
     @params.setter
     def params(self, v: np.ndarray):
         self.phi[:] = v.reshape(self.phi.shape)
+    
+    @property
+    def shape(self):
+        return self.phi.shape
 
+@register('ry', 'u3', requires_type=True)
 @dataclass
 class SingleQubitLayer(MeasurementLayer):
     type: str = 'ry'
@@ -122,7 +141,8 @@ class SingleQubitLayer(MeasurementLayer):
         ops = [self.ufunc(*self.phi[i, qi, qubit])
                for qubit in range(self.qubits)]
         return tensor(ops, list(range(self.qubits)), self.qubits)
-    
+
+@register('cnotry')
 @dataclass
 class CnotRyLayer(MeasurementLayer):
     def __post_init__(self):
@@ -155,7 +175,8 @@ class CnotRyLayer(MeasurementLayer):
             Ry(self.phi[i, qi, 1, 1]))
         U = U2 @ cnot01 @ U1
         return U
-    
+
+@register('u10')
 @dataclass
 class U10Layer(MeasurementLayer):
     def __post_init__(self):
