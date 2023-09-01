@@ -33,6 +33,7 @@ g14_<mode>/
 The possible modes are as follows:
 - `constrained_ry`: Nonviolation hamiltonian, fixing Alice and Bob's measurement parameters
     to Bob = Alice*, with Ry measurement layer
+- `constrained_cnotry`: Same thing as above, just with the `cnotry` measurement layer
 
 These modes are not described in the paper:
 - `balanced`: Balanced violation hamiltonian, independent measurement parameters
