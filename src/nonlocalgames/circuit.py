@@ -186,7 +186,8 @@ def load_adapt_ansatz(
         state: Sequence[Tuple[float, str]],
         ref_ket,
         qreg_sizes: Sequence[int],
-        adapt_order=False):
+        adapt_order=False,
+        min_theta = 0):
 
     qregs: Sequence[QuantumRegister] = []
     qubits = 0
@@ -213,7 +214,11 @@ def load_adapt_ansatz(
 
     # adapt_order means the parameters are stored in [tN, tN-1, ..., t1]
     iter_ = reversed(state) if adapt_order else state
-    for idx, (theta, qubit_op_str) in enumerate(iter_):
+    idx = 0
+    for theta, qubit_op_str in iter_:
+        if np.abs(theta) < min_theta:
+            continue
+
         op = qubitop_from_str(qubit_op_str)
 
         # Construct pauli gate
@@ -226,6 +231,7 @@ def load_adapt_ansatz(
         gate = PauliEvolutionGate(pauli, time=param)
 
         qc.append(gate, full_qreg)
+        idx += 1
     
     # Set all the theta parameters to their values
     qc = qc.bind_parameters(parameters)

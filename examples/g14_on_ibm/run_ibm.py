@@ -57,11 +57,14 @@ def load_g14_circuit(path: str):
         if phi.ndim == 1:
             phi = np.concatenate([phi, phi]).reshape(ml.shape)
         else:
-            phi = np.expand_dims(phi, 0)
             phi = np.concatenate([phi, phi])
             assert phi.shape == ml.shape
     
     ml.params = phi
+
+    if constrained:
+        ml.conj(1)
+
     return qc, ml
 
 def run(account: str, circuit: str, shots = 1024, backends: str = None):

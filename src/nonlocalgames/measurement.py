@@ -104,6 +104,9 @@ class MeasurementLayer(ABC):
     def shape(self):
         return self.phi.shape
 
+    def conj(self, i: int):
+        pass
+
 @register('ry', 'u3', requires_type=True)
 @dataclass
 class SingleQubitLayer(MeasurementLayer):
@@ -141,6 +144,10 @@ class SingleQubitLayer(MeasurementLayer):
         ops = [self.ufunc(*self.phi[i, qi, qubit])
                for qubit in range(self.qubits)]
         return tensor(ops, list(range(self.qubits)), self.qubits)
+    
+    def conj(self, i: int):
+        if self.type == 'u3':
+            self.phi[i, ..., 1:] = -self.phi[i, ..., 1:]
 
 @register('cnotry')
 @dataclass
@@ -197,21 +204,25 @@ class U10Layer(MeasurementLayer):
 
         qc.cx(qreg[0], qreg[1])
 
-        qc.rx(phi[idx+3], qreg[0])
         qc.rz(phi[idx+4], qreg[0])
+        qc.rx(phi[idx+3], qreg[0])
 
-        qc.rz(phi[idx+8], qreg[1])
         qc.rx(phi[idx+9], qreg[1])
-    
+        qc.rz(phi[idx+8], qreg[1])
+
     def to_unitary(self, i: int, qi: int):
         # This also has 2 qubits
         U1 = np.kron(
             U3(*self.phi[i, qi, 0, 0:3]),
             U3(*self.phi[i, qi, 1, 0:3])
         )
+        # Todo: Flip the Rx and Rz gates
         U2 = np.kron(
             Rx(self.phi[i, qi, 0, 3]) @ Rz(self.phi[i, qi, 0, 4]),
             Rz(self.phi[i, qi, 1, 3]) @ Rx(self.phi[i, qi, 1, 4]),
         )
         U = U2 @ cnot01 @ U1
         return U
+
+    def conj(self, i: int):
+        self.phi[i, ..., 1:] = -self.phi[i, ..., 1:]
