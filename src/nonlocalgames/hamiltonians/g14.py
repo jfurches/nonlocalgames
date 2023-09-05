@@ -1,6 +1,7 @@
 from functools import cache, cached_property
 import json
 from importlib import resources
+import itertools
 
 import numpy as np
 from scipy.sparse import csc_matrix
@@ -50,6 +51,7 @@ class G14(NLGHamiltonian):
         ham_type: str = 'violation',
         weighting: str | None = None,
         constrain_phi = True,
+        ancilla = 0,
         **kwargs):
         '''Construct hamiltonian for G14
         
@@ -61,6 +63,11 @@ class G14(NLGHamiltonian):
             weighting: How to weight the hamiltonian terms $H_v$ and $H_e$. Default is
                 None, but passing `balanced` will scale the terms to account for
                 imbalance in the number of questions.
+            
+            constrain_phi: Enforce the constraint that Bob's measurement operators
+                are equal to the complex conjugate of Alice's
+            
+            ancilla: Number of auxiliary qubits per player, default 0
         '''
 
         # Construct parameter shape before calling super init. If constrain_phi
@@ -68,6 +75,11 @@ class G14(NLGHamiltonian):
         self._constrain_phi = constrain_phi
         if self._constrain_phi:
             self.players = 1
+        
+        # Add ancilla qubits to each player
+        self.ancilla = ancilla
+        self.qubits = self.qubits + ancilla
+        self._system = 2 * self.qubits
 
         # Call super __init__ to generate measurement layer
         super().__init__(**kwargs)
@@ -86,7 +98,7 @@ class G14(NLGHamiltonian):
         g14 = G14._get_graph()
 
         # Projector onto matching color assignments, full subspace
-        pcc = G14._pcc(self._system)
+        pcc = self._pcc()
         if self._ham_type == 'full':
             pcc = 2 * pcc - np.eye(pcc.shape[0])
         elif self._ham_type == 'nonviolation':
@@ -153,21 +165,59 @@ class G14(NLGHamiltonian):
         return ket
 
     @cache
-    @staticmethod
-    def _pcc(qubits: int) -> csc_matrix:
-        # The equal color projector consists of
-        #   |00><00| + |11><11| + ... + |33><33|.
-        # This is a diagonal matrix, very sparse. |00><00| obviously
-        # has index (0, 0). Color c projector |cc> is 4*c + c = 5c,
-        # hence we can just construct the sparse matrix with 1-entries
-        # at (5c, 5c) for c = (0, 1, 2, 3).
-        idx = list(map(lambda x: 5*x, range(G14.chi_q)))
-        data = np.ones(len(idx))
-        pcc = csc_matrix(
-            (data, (idx, idx)),
-            shape=(2 ** qubits, 2 ** qubits),
-            dtype=complex
-        )
+    def _pcc(self) -> csc_matrix:
+        # Old no-ancilla code
+        if self.ancilla == 0:
+            # The equal color projector consists of
+            #   |00><00| + |11><11| + ... + |33><33|.
+            # This is a diagonal matrix, very sparse. |00><00| obviously
+            # has index (0, 0). Color c projector |cc> is 4*c + c = 5c,
+            # hence we can just construct the sparse matrix with 1-entries
+            # at (5c, 5c) for c = (0, 1, 2, 3).
+            idx = list(map(lambda x: 5*x, range(G14.chi_q)))
+            data = np.ones(len(idx))
+            pcc = csc_matrix(
+                (data, (idx, idx)),
+                shape=(2 ** self._system, 2 ** self._system),
+                dtype=complex
+            )
+
+            return pcc
+
+        # New color projector, has hidden qubits like |hc>a x |hc>b. Instead
+        # of a fancy sparse matrix index method, we'll just compute the outer
+        # products explicitly
+
+        # Compute the number of qubits required to represent chi_q just to be general
+        chi_q_qubits = int(np.ceil(np.log2(G14.chi_q)))
+
+        pcc = csc_matrix((2 ** self._system, 2 ** self._system), dtype=complex)
+        for c in range(G14.chi_q):
+            # |c> vector
+            c_ket = one_hot(c, 2 ** chi_q_qubits)
+
+            # Add in all possible hidden states
+            n_hidden_states = 2 ** self.ancilla
+            for h in itertools.product(
+                range(n_hidden_states),
+                repeat=max(2, self.players)
+            ):
+
+                # Tensor the players together, forming
+                # |hi c> x |hi c> ...
+                ket = None
+                for hi in h:
+                    hi_ket = one_hot(hi, n_hidden_states)
+                    if ket is None:
+                        ket = np.kron(hi_ket, c_ket)
+                    else:
+                        ket = np.kron(ket, np.kron(hi_ket, c_ket))
+
+                projector = np.outer(ket, ket)
+                pcc += projector
+        
+        pcc = csc_matrix(pcc)
+        
         return pcc
 
     @cache
@@ -205,3 +255,8 @@ class G14(NLGHamiltonian):
             edges=None,
             edge_links=np.array(edges)
         )
+
+def one_hot(i: int, N: int):
+    x = np.zeros(N)
+    x[i] = 1
+    return x

@@ -12,6 +12,8 @@ from nonlocalgames.hamiltonians import (
     G14
 )
 
+from nonlocalgames.hamiltonians.g14 import one_hot
+
 from nonlocalgames import methods
 
 from nonlocalgames.qinfo import (
@@ -20,9 +22,9 @@ from nonlocalgames.qinfo import (
     Ry, tensor
 )
 
-class TestHamiltonians:
+class TestCHSH:
     @pytest.mark.parametrize('mode', ['optimal', 'normal'])
-    def test_chsh(self, mode: str):
+    def test_properties(self, mode: str):
         ham = CHSHHamiltonian(init_mode=mode)
         ham.init()
 
@@ -33,6 +35,7 @@ class TestHamiltonians:
             w = eigvalsh(ham.mat)
             min_eigval = min(w.real)
             assert np.isclose(min_eigval, -2*np.sqrt(2))
+
         elif mode == 'normal':
             # Check that seeding produces the same hamiltonian
             ham.init(seed=42)
@@ -55,8 +58,10 @@ class TestHamiltonians:
 
         assert np.isclose(metrics['energy'][-1], -2 * np.sqrt(2))
 
+
+class TestNPS:
     @pytest.mark.parametrize('n', [2,3,4,5])
-    def test_Npartite(self, n: int, trials=5):
+    def test_properties(self, n: int, trials=5):
         ham = NPartiteSymmetricNLG(n)
         ham.init()
 
@@ -121,16 +126,15 @@ class TestG14:
         for edge in graph.edge_links:
             assert edge[::-1] in graph.edge_links
 
-    def test_g14_pcc(self):
-        pcc = G14._pcc(4)
+    def test_g14_pcc_no_ancilla(self):
+        ham = G14()
+        pcc = ham._pcc()
         assert pcc.nnz == 4
         assert is_hermitian(pcc)
 
         for c1, c2 in itertools.product(range(G14.chi_q), repeat=2):
-            v1 = np.zeros(4)
-            v2 = np.zeros(4)
-            v1[c1] = 1
-            v2[c2] = 1
+            v1 = one_hot(c1, G14.chi_q)
+            v2 = one_hot(c2, G14.chi_q)
 
             psi = np.kron(v1, v2)
 
@@ -139,6 +143,34 @@ class TestG14:
             else:
                 assert np.allclose(pcc @ psi, 0, rtol=0)
     
+    @pytest.mark.parametrize('ancilla', range(1, 3))
+    def test_g14_pcc_ancilla(self, ancilla):
+        ham = G14(ancilla=ancilla)
+        pcc = ham._pcc()
+
+        assert pcc.nnz == 4 * (2 ** (2 * ancilla))
+        assert is_hermitian(pcc)
+
+        for c1, c2 in itertools.product(range(G14.chi_q), repeat=2):
+            n_hidden_states = 2 ** ancilla
+            for h1, h2 in itertools.product(range(n_hidden_states), repeat=2):
+                v1 = np.kron(
+                    one_hot(h1, n_hidden_states),
+                    one_hot(c1, G14.chi_q)
+                )
+                v2 = np.kron(
+                    one_hot(h2, n_hidden_states),
+                    one_hot(c2, G14.chi_q)
+                )
+
+                psi = np.kron(v1, v2)
+
+                # Make sure we get the same behavior even with ancilla qubits
+                if c1 == c2:
+                    assert np.allclose(pcc @ psi, psi, rtol=0)
+                else:
+                    assert np.allclose(pcc @ psi, 0, rtol=0)
+
     @pytest.mark.parametrize('constrain,layer', itertools.product(
             (True, False),
             ('ry', 'u3', 'cnotry', 'u10')
