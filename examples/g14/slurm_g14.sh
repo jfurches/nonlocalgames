@@ -51,5 +51,5 @@ python run_g14.py --adapt-tol=1e-6 --dpo-tol=1e-6 \
     --seeds=../../data/seeds.txt \
     --trials=500 \
     --constrained \
-    --layer=u10 \
+    --layer=u3ry \
     --type=nonviolation

@@ -5,6 +5,8 @@ from typing import Tuple, Callable
 
 import numpy as np
 
+from nonlocalgames.qinfo import np
+
 with warnings.catch_warnings():
     warnings.filterwarnings(action='ignore', category=DeprecationWarning)
     from qiskit import (
@@ -226,3 +228,42 @@ class U10Layer(MeasurementLayer):
 
     def conj(self, i: int):
         self.phi[i, ..., 1:] = -self.phi[i, ..., 1:]
+
+@register('u3ry')
+@dataclass
+class U3Ry(MeasurementLayer):
+    def __post_init__(self):
+        # Initialize the parameters if not given
+        if self.phi is None:
+            shape = (self.players, self.questions, self.qubits, 4)
+            self.phi = np.zeros(shape, dtype=float)
+    
+    def add(self, i, qc, qreg, phi):
+        assert len(qreg) == 2
+
+        stride = self.phi.shape[-2] * self.phi.shape[-1]
+        idx = i * stride
+
+        qc.u(*phi[idx:idx+3], qreg[0])
+        qc.u(*phi[idx+4:idx+7], qreg[1])
+
+        qc.cx(qreg[0], qreg[1])
+
+        qc.ry(phi[idx+3], qreg[0])
+        qc.ry(phi[idx+7], qreg[1])
+    
+    def to_unitary(self, i: int, qi: int):
+        U3_layer = np.kron(
+            U3(*self.phi[i, qi, 0, 0:3]),
+            U3(*self.phi[i, qi, 1, 0:3])
+        )
+
+        Ry_layer = np.kron(
+            Ry(self.phi[i, qi, 0, 3]),
+            Ry(self.phi[i, qi, 1, 3])
+        )
+
+        return Ry_layer @ cnot01 @ U3_layer
+    
+    def conj(self, i: int):
+        self.phi[i, ..., 1:3] = -self.phi[i, ..., 1:3]

@@ -14,7 +14,7 @@ from nonlocalgames.qinfo import is_unitary
 from nonlocalgames.hamiltonians import G14
 
 class TestMeasurement:
-    @pytest.mark.parametrize('layer', ('ry', 'cnotry', 'u3', 'u10'))
+    @pytest.mark.parametrize('layer', ('ry', 'cnotry', 'u3', 'u10', 'u3ry'))
     def test_layers(self, layer):
         ml = MeasurementLayer.get(layer, 2, 14, 2)
         ml.phi[:] = np.random.normal(size=ml.phi.shape)
