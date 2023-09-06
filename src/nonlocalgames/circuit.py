@@ -144,6 +144,10 @@ class NLGCircuit:
         return eval_qc
     
     def _transform_results(self, result: Result, return_statevector = False):
+        return NLGCircuit.transform_results(result, return_statevector)
+    
+    @staticmethod
+    def transform_results(result: Result, return_statevector = False):
         counts: Counts | Sequence[Counts] = result.get_counts()
         if isinstance(counts, dict):
             counts = util.from_ket_form(counts)

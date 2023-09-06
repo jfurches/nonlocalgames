@@ -35,16 +35,29 @@ class NumpyEncoder(json.JSONEncoder):
 
 def get_cli_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num-cpus', type=int, default=1)
-    parser.add_argument('--seeds', default='../../data/seeds.txt')
-    parser.add_argument('--weighting', default=None)
-    parser.add_argument('-n', '--trials', type=int, default=None)
-    parser.add_argument('--dpo-tol', type=float, default=1e-6)
-    parser.add_argument('--adapt-tol', type=float, default=1e-3)
-    parser.add_argument('--constrained', action='store_true')
-    parser.add_argument('--phi-tol', type=float, default=1e-5)
-    parser.add_argument('--type', default='violation')
-    parser.add_argument('--layer', default='ry')
+    parser.add_argument('--num-cpus', type=int, default=1,
+                        help='Number of processes to use')
+    parser.add_argument('--seeds', default='../../data/seeds.txt',
+                        help='File containing random seeds to read from')
+    parser.add_argument('-n', '--trials', type=int, default=None,
+                        help='How many trials to run with different seeds')
+
+    parser.add_argument('--dpo-tol', type=float, default=1e-6,
+                        help='Maximum change in energy for convergence')
+    parser.add_argument('--adapt-tol', type=float, default=1e-3,
+                        help='Maximum allowed gradient of ADAPT for convergence')
+    parser.add_argument('--phi-tol', type=float, default=1e-5,
+                        help='Maximum gradient of measurement parameters for convergence')
+
+    parser.add_argument('--type', default='violation',
+                        help='Hamiltonian type, e.g. violation, nonviolation')
+    parser.add_argument('--weighting', default=None,
+                        help='How to weight the hamiltonian')
+    parser.add_argument('--constrained', action='store_true',
+                        help="Whether to constrain Bob's operators to be conj to Alice")
+    parser.add_argument('--layer', default='ry',
+                        help='Measurement layer type (see measurement.py)')
+
     args = parser.parse_args()
     return args
 
