@@ -36,7 +36,8 @@ def load_g14_circuit(path: str):
         data['state'],
         '++++',
         [qubits] * players,
-        adapt_order=False)
+        adapt_order=False,
+        min_theta = 1e-4)
 
     # Don't need to transform phi since qinfo's Ry gate follows the qiskit convention
     phi = np.array(data['phi'])
@@ -83,9 +84,11 @@ def run(account: str, circuit: str, shots = 1024, backends: str = None):
             min_num_qubits=4
         )
     
+    print(backends)
+    
     shared_state, ml = load_g14_circuit(circuit)
     tasks = [IBMTask(backend, shared_state, ml, shots) for backend in backends]
-    with ThreadPool(processes=1) as p:
+    with ThreadPool(processes=len(tasks)) as p:
         results = list(tqdm.tqdm(p.imap(task, tasks), total=len(tasks)))
 
     print('Aggregating')
@@ -155,3 +158,7 @@ class IBMTask:
 
 def task(task: IBMTask):
     task.run()
+
+if __name__ == '__main__':
+    args = get_cli_args()
+    run(args.account, args.circuit, shots=args.shots, backends=args.backends)
