@@ -49,6 +49,10 @@ def dual_phase_optim(
         seed: A seed for the RNG to produce replicable results.
     '''
 
+    # Fixme: fix this
+    if ham._param_init_mode == 'normal':
+        raise NotImplementedError('This can cause desync between phi copies')
+
     # Starting hamiltonian, random measurement parameters
     np_random = np.random.default_rng(seed=seed)
     phi_random = np_random.normal(scale=np.pi/2, size=ham.params.shape)

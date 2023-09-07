@@ -50,5 +50,6 @@ python run_g14.py --adapt-tol=1e-6 --dpo-tol=1e-6 \
     --num-cpus=16 \
     --seeds=../../data/seeds.txt \
     --trials=500 \
-    --weighting=balanced \
-    --constrained
+    --constrained \
+    --layer=u3ry \
+    --type=nonviolation

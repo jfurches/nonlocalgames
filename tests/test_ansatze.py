@@ -41,7 +41,7 @@ def saved_state():
         data: dict = json.load(f)
     
     state = data['state']
-    phi = np.array(data['phi'])
+    phi = np.array(data['phi']).reshape(2, 14, 2, 1)
     return state, phi
 
 @pytest.fixture(scope='session')
@@ -50,7 +50,7 @@ def adapt_state(saved_state):
     state, phi = saved_state
     ham = G14()
     ham.init()
-    qubits = 2 * ham._qubits
+    qubits = 2 * ham.qubits
 
     ansatz = AdaptiveAnsatz(ham.mat, ham.ref_ket)
     # Load in reversed order so we can do append() calls instead of

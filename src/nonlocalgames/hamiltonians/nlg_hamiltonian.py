@@ -7,6 +7,8 @@ from scipy.sparse import csc_matrix
 from adaptgym.hamiltonians import Hamiltonian
 from adaptgym.pools import OperatorPool
 
+from ..measurement import MeasurementLayer
+
 
 class NLGHamiltonian(Hamiltonian):
     '''Base class for hamiltonians of non-local games, which
@@ -18,10 +20,11 @@ class NLGHamiltonian(Hamiltonian):
     throughout an optimization procedure.
     '''
 
-    desired_shape = -1
-    '''The shape the parameter vector should take internally'''
+    players = 0
+    questions = 0
+    qubits = 0
 
-    def __init__(self, init_mode = None):
+    def __init__(self, init_mode = None, measurement_layer = 'ry'):
         '''Sets up the hamiltonian without computing the sparse matrix
         and operator pool.
         
@@ -31,7 +34,12 @@ class NLGHamiltonian(Hamiltonian):
                 measurement parameters as a normal distribution. This is
                 determined by the subclass implementing `NLGHamiltonian`.
         '''
-        self._params: np.ndarray = np.zeros(self.desired_shape)
+        self._ml = MeasurementLayer.get(
+            measurement_layer,
+            self.players,
+            self.questions,
+            self.qubits)
+        self._params = self._ml.phi
         self._param_init_mode = init_mode
 
         self._sp_ham: csc_matrix = None
@@ -65,7 +73,9 @@ class NLGHamiltonian(Hamiltonian):
         self._np_random = np.random.default_rng(seed)
 
         if self._param_init_mode == 'normal':
-            self._params = self._np_random.normal(loc=0, scale=np.pi/2, size=self.desired_shape)
+            self._params[:] = self._np_random.normal(loc=0, scale=np.pi/2, size=self.desired_shape)
+        elif self._param_init_mode == 'uniform':
+            self._params[:] = self._np_random.uniform(-np.pi, np.pi, size=self.desired_shape)
 
         self._sp_ham = self._generate_hamiltonian()
         self._init_pool()
@@ -82,11 +92,11 @@ class NLGHamiltonian(Hamiltonian):
         '''Setter for hamiltonian measurement parameters that regenerates the
         matrix if the parameters change'''
 
-        old_params = self._params
-        self._params = params.reshape(self.desired_shape)
+        same = np.allclose(self.params, params.ravel(), rtol=0, atol=1e-10)
+        self._params[:] = params.reshape(self.desired_shape)
 
         # Regenerate the hamiltonian if we changed the parameters
-        if not np.allclose(old_params, self._params, rtol=0, atol=1e-10):
+        if not same:
             self._sp_ham = self._generate_hamiltonian()
 
     @property
@@ -103,3 +113,7 @@ class NLGHamiltonian(Hamiltonian):
         '''Returns the number of operators in the pool'''
         self._init_pool()
         return len(self._pool)
+
+    @property
+    def desired_shape(self):
+        return self._ml.phi.shape

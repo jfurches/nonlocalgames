@@ -9,21 +9,23 @@ from .nlg_hamiltonian import NLGHamiltonian
 from ..qinfo import *
 
 class NPartiteSymmetricNLG(NLGHamiltonian):
+    questions = 2
+    qubits = 1
+
     def __init__(self, N: int, **kwargs):
-        self.N = N
-        self.desired_shape = (N, 2)
+        self.players = N
 
         super().__init__(**kwargs)
 
         self._pool = AllPauliPool(N)
 
     def _generate_hamiltonian(self) -> csc_matrix:
-        N = self.N
+        N = self.players
         d = 2 ** N
-        phi = self._params
 
         def M(i, q):
-            A = Ry(-phi[i, q]) @ Z @ Ry(phi[i, q])
+            Uqi = self._ml.to_unitary(i, q)
+            A = Uqi.conj().T @ Z @ Uqi
             return tensor_i(A, i, N)
 
         # Initialize each of these terms to 0
@@ -52,13 +54,13 @@ class NPartiteSymmetricNLG(NLGHamiltonian):
         return H
 
     def _init_pool(self):
-        self._pool.init(qubits=self.N)
+        self._pool.init(qubits=self.players * self.qubits)
         self._pool.get_operators()
         self._pool.generate_sparse_ops()
 
     @property
     def ref_ket(self):
-        d = 2 ** self.N
+        d = 2 ** self.players
         # Equal superposition state
         ket = csc_matrix(np.full((d, 1), 1 / np.sqrt(d)), dtype=complex)
         # ket[0, 0] = 1 # |00...> state

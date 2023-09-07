@@ -12,7 +12,7 @@ from matplotlib.cm import get_cmap
 from matplotlib.colors import Colormap
 from matplotlib.collections import LineCollection, PathCollection
 
-from nonlocalgames.hamiltonians import G14
+from .hamiltonians import G14
 
 
 def load_seeds(path = 'data/seeds.txt'):

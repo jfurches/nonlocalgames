@@ -6,7 +6,7 @@ import multiprocessing as mp
 import os
 import pickle as pkl
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Any, Sequence
 import shutil
 
@@ -21,6 +21,7 @@ from nonlocalgames.hamiltonians import G14
 gym.logger.set_level(logging.CRITICAL)
 
 TMPDIR = 'tmpdata'
+DATADIR = 'data'
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -34,19 +35,37 @@ class NumpyEncoder(json.JSONEncoder):
 
 def get_cli_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num-cpus', type=int, default=1)
-    parser.add_argument('--seeds', default='../../data/seeds.txt')
-    parser.add_argument('--weighting', default=None)
-    parser.add_argument('-n', '--trials', type=int, default=None)
-    parser.add_argument('--dpo-tol', type=float, default=1e-6)
-    parser.add_argument('--adapt-tol', type=float, default=1e-3)
-    parser.add_argument('--constrained', action='store_true')
-    parser.add_argument('--phi-tol', type=float, default=1e-5)
-    parser.add_argument('--type', default='violation')
+    parser.add_argument('--num-cpus', type=int, default=1,
+                        help='Number of processes to use')
+    parser.add_argument('--seeds', default='../../data/seeds.txt',
+                        help='File containing random seeds to read from')
+    parser.add_argument('-n', '--trials', type=int, default=None,
+                        help='How many trials to run with different seeds')
+
+    parser.add_argument('--dpo-tol', type=float, default=1e-6,
+                        help='Maximum change in energy for convergence')
+    parser.add_argument('--adapt-tol', type=float, default=1e-3,
+                        help='Maximum allowed gradient of ADAPT for convergence')
+    parser.add_argument('--phi-tol', type=float, default=1e-5,
+                        help='Maximum gradient of measurement parameters for convergence')
+
+    parser.add_argument('--type', default='violation',
+                        help='Hamiltonian type, e.g. violation, nonviolation')
+    parser.add_argument('--weighting', default=None,
+                        help='How to weight the hamiltonian')
+    parser.add_argument('--constrained', action='store_true',
+                        help="Whether to constrain Bob's operators to be conj to Alice")
+    parser.add_argument('--layer', default='ry',
+                        help='Measurement layer type (see measurement.py)')
+
     args = parser.parse_args()
     return args
 
 def create_trials(args: argparse.Namespace):
+    global TMPDIR, DATADIR
+    TMPDIR = f'{TMPDIR}_{args.layer}'
+    DATADIR = f'{DATADIR}_{args.layer}'
+
     seeds = util.load_seeds(args.seeds)
     trials = args.trials or len(seeds)
 
@@ -76,7 +95,8 @@ def create_trials(args: argparse.Namespace):
                            adapt_tol=args.adapt_tol,
                            constrain_phi=args.constrained,
                            phi_tol=args.phi_tol,
-                           type=args.type),
+                           type=args.type,
+                           layer=args.layer),
         remaining
     ))
 
@@ -86,7 +106,7 @@ def main(args: argparse.Namespace):
     cpus = args.num_cpus
     task_args = create_trials(args)
 
-    os.makedirs('data', exist_ok=True)
+    os.makedirs(DATADIR, exist_ok=True)
 
     print('Starting processing')
     # Call tqdm(pool.imap) to construct a progress bar. We then wrap that
@@ -117,16 +137,17 @@ def main(args: argparse.Namespace):
         if energy < best_energy:
             best_energy = energy
 
-            with open('data/g14_state.json', 'w', encoding='utf-8') as f:
+            with open(f'{DATADIR}/g14_state.json', 'w', encoding='utf-8') as f:
                 json.dump({
                     'state': result.state,
                     'phi': result.phi.reshape(phi_shape).tolist(),
-                    'metrics': result.metrics
+                    'metrics': result.metrics,
+                    'metadata': result.metadata.to_dict()
                 }, f, cls=NumpyEncoder)
 
     print('Aggregating results')
     df = pd.concat(dataframes, axis=0, ignore_index=True)
-    df.to_csv('data/g14_trials.csv', index=False)
+    df.to_csv(f'{DATADIR}/g14_trials.csv', index=False)
 
     # Cleanup intermediate results directory
     shutil.rmtree(TMPDIR)
@@ -148,14 +169,18 @@ class TaskArgs:
     phi_tol: float = 1e-5
     constrain_phi: bool = True
     type: str = 'violation'
+    layer: str = 'ry'
 
     def ham(self):
         return G14(
             weighting=self.weighting,
-            measurement_layer='ry',
+            measurement_layer=self.layer,
             constrain_phi=self.constrain_phi,
             ham_type=self.type
         )
+    
+    def to_dict(self):
+        return asdict(self)
 
 @dataclass
 class TaskResult:
