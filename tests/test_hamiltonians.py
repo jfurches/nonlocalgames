@@ -9,10 +9,12 @@ from scipy.linalg import eigvalsh
 from nonlocalgames.hamiltonians import (
     CHSHHamiltonian,
     NPartiteSymmetricNLG,
-    G14
+    G14,
+    Ramsey
 )
 
 from nonlocalgames.hamiltonians.g14 import one_hot
+from nonlocalgames.hamiltonians.ramsey import P17
 
 from nonlocalgames import methods
 
@@ -214,3 +216,44 @@ class TestG14:
         # must be real
         assert np.allclose(Uv, Uv.conj())
         assert np.all(np.isreal(Uv))
+
+
+@pytest.fixture(scope='module')
+def ramsey():
+    '''Fixture to reuse ramsey module so we don't recompute unnecessary things. Just to
+    speed up testing.'''
+    return Ramsey()
+
+class TestRamsey:
+    def test_pvp(self, ramsey: Ramsey):
+        pvp = ramsey.pvp
+        assert is_hermitian(pvp)
+        assert len(pvp.data) == len(P17)
+        assert pvp.max() == 1
+
+        for v in range(32):
+            vec = one_hot(v, 32)
+            vv = np.kron(vec, vec).reshape(-1, 1)
+            prod = (vv.T @ pvp @ vv).item()
+            if v < 17:
+                assert prod == 1
+            else:
+                assert prod == 0
+
+    def test_pep(self, ramsey: Ramsey):
+        pep = ramsey.pep
+        assert is_hermitian(pep)
+        assert len(pep.data) == len(P17.edges)
+        assert pep.max() == 1
+
+        for u, v in P17.edges:
+            uvec = one_hot(u, 32)
+            vvec = one_hot(v, 32)
+            vv = np.kron(uvec, vvec).reshape(-1, 1)
+            prod = (vv.T @ pep @ vv).item()
+            assert prod == 1
+
+            # Test that the reverse edges are present in the projector
+            vv = np.kron(vvec, uvec).reshape(-1, 1)
+            prod = (vv.T @ pep @ vv).item()
+            assert prod == 1
