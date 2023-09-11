@@ -257,3 +257,8 @@ class TestRamsey:
             vv = np.kron(vvec, uvec).reshape(-1, 1)
             prod = (vv.T @ pep @ vv).item()
             assert prod == 1
+    
+    def test_properties(self, ramsey: Ramsey):
+        ramsey.init()
+        assert is_hermitian(ramsey.mat)
+        assert ramsey.mat.shape == (1024, 1024)
