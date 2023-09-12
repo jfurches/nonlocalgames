@@ -171,7 +171,7 @@ class NLGCircuit:
         '''Returns the quantum circuit transpiled for the simulator'''
 
         if self.sim is None:
-            raise RuntimeError('Simulator must not be None')
+            return self.qc
     
         return transpile(self.qc, backend=self.sim)
     
