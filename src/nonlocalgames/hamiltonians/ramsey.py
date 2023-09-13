@@ -46,7 +46,7 @@ class Ramsey(NLGHamiltonian):
 
         p_q = 1 / self.questions
         ham *= p_q
-        return ham
+        return -ham
     
     def _init_pool(self):
         self._pool.init(qubits=self._system)
@@ -69,7 +69,7 @@ class Ramsey(NLGHamiltonian):
             shape=(2 ** self._system, 2 ** self._system),
             dtype=complex
         )
-        return pvp
+        return pvp.todense()
     
     @cached_property
     def pep(self):
@@ -87,7 +87,7 @@ class Ramsey(NLGHamiltonian):
             shape=(2 ** self._system, 2 ** self._system),
             dtype=complex
         )
-        return pep
+        return pep.todense()
 
     @cached_property
     def ref_ket(self):
