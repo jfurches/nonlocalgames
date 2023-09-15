@@ -48,6 +48,8 @@ def get_cli_args():
                         help='Maximum allowed gradient of ADAPT for convergence')
     parser.add_argument('--phi-tol', type=float, default=1e-5,
                         help='Maximum gradient of measurement parameters for convergence')
+    parser.add_argument('--theta-tol', type=float, default=1e-9,
+                        help='Maximum gradient for theta optimization during ADAPT')
 
     parser.add_argument('--layer', default='ry',
                         help='Measurement layer type (see measurement.py)')
@@ -87,6 +89,7 @@ def create_trials(args: argparse.Namespace):
                            dpo_tol=args.dpo_tol,
                            adapt_tol=args.adapt_tol,
                            phi_tol=args.phi_tol,
+                           theta_tol=args.theta_tol,
                            layer=args.layer),
         remaining
     ))
@@ -157,6 +160,7 @@ class TaskArgs:
     dpo_tol: float = 1e-6
     adapt_tol: float = 1e-3
     phi_tol: float = 1e-5
+    theta_tol: float = 1e-9
     layer: str = 'ry'
 
     def ham(self):
@@ -197,6 +201,7 @@ def task(args: TaskArgs) -> TaskResult:
         tol=args.dpo_tol,
         save_mutual_information=True,
         adapt_thresh=args.adapt_tol,
+        theta_thresh=args.theta_tol,
         phi_tol=args.phi_tol)
 
     for iter_ in range(len(metrics['energy'])):

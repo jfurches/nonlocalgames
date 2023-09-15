@@ -1,4 +1,4 @@
-from nonlocalgames import methods, util
+from nonlocalgames import methods
 from nonlocalgames.hamiltonians import Ramsey
 
 if __name__ == '__main__':
@@ -6,5 +6,5 @@ if __name__ == '__main__':
     results = methods.dual_phase_optim(
         ham,
         tol=1e-6,
-        adapt_thresh=1e-3,
+        adapt_thresh=1e-2,
         theta_thresh=1e-6)

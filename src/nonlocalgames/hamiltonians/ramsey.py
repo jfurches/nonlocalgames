@@ -17,7 +17,7 @@ P17: nx.Graph = paley_graph(17)
 
 class Ramsey(NLGHamiltonian):
     players = 2
-    questions = len(K4) + len(K4.edges)
+    questions = len(K4)
     qubits = 5
 
     _system = players * qubits
@@ -25,7 +25,7 @@ class Ramsey(NLGHamiltonian):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self._pool = PauliPool((2,), ops='XYZ')
+        self._pool = PauliPool((2,3), ops='XYZ')
     
     def _generate_hamiltonian(self) -> csc_matrix:
         pvp = self.pvp
@@ -44,7 +44,8 @@ class Ramsey(NLGHamiltonian):
             Uq = self._ml.uq((v2, v1))
             ham += Uq.T.conj() @ pep @ Uq
 
-        p_q = 1 / self.questions
+        Q = len(K4.nodes) + 2 * len(K4.edges)
+        p_q = 1 / Q
         ham *= p_q
         return -ham
     
