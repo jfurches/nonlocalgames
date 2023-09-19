@@ -11,7 +11,7 @@
 #SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=8G
-#SBATCH --time=1-00:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --export=ALL
 
 
@@ -48,9 +48,9 @@ pip install ../../
 
 python run_ramsey.py \
     --adapt-tol=1e-2 \
-    --dpo-tol=1e-6 \
+    --dpo-tol=1e-3 \
     --theta-tol=1e-6 \
     --num-cpus=16 \
     --seeds=../../data/seeds.txt \
-    --trials=100 \
+    --trials=50 \
 
