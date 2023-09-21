@@ -1,5 +1,7 @@
+import argparse
+
 from nonlocalgames import methods
-from nonlocalgames.hamiltonians import Ramsey
+from nonlocalgames.hamiltonians import Ramsey, MiniRamsey
 
 if __name__ == '__main__':
     ham = Ramsey(measurement_layer='ry')

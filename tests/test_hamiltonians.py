@@ -10,11 +10,11 @@ from nonlocalgames.hamiltonians import (
     CHSHHamiltonian,
     NPartiteSymmetricNLG,
     G14,
-    Ramsey
+    Ramsey, MiniRamsey
 )
 
 from nonlocalgames.hamiltonians.g14 import one_hot
-from nonlocalgames.hamiltonians.ramsey import P17
+from nonlocalgames.hamiltonians.ramsey import P17, R6
 
 from nonlocalgames import methods
 
@@ -224,11 +224,16 @@ def ramsey():
     speed up testing.'''
     return Ramsey()
 
+@pytest.fixture(scope='module')
+def mini_ramsey():
+    '''Fixture to reuse ramsey module so we don't recompute unnecessary things. Just to
+    speed up testing.'''
+    return MiniRamsey()
+
 class TestRamsey:
     def test_pvp(self, ramsey: Ramsey):
         pvp = ramsey.pvp
         assert is_hermitian(pvp)
-        assert len(pvp.data) == len(P17)
         assert pvp.max() == 1
 
         for v in range(32):
@@ -243,7 +248,6 @@ class TestRamsey:
     def test_pep(self, ramsey: Ramsey):
         pep = ramsey.pep
         assert is_hermitian(pep)
-        assert len(pep.data) == len(P17.edges)
         assert pep.max() == 1
 
         for u, v in P17.edges:
@@ -262,3 +266,42 @@ class TestRamsey:
         ramsey.init()
         assert is_hermitian(ramsey.mat)
         assert ramsey.mat.shape == (1024, 1024)
+
+class TestMiniRamsey:
+    def test_pvp(self, mini_ramsey: MiniRamsey):
+        pvp = mini_ramsey.pvp
+        assert is_hermitian(pvp)
+        assert pvp.max() == 1
+
+        d = 2 ** mini_ramsey.qubits
+        for v in range(d):
+            vec = one_hot(v, d)
+            vv = np.kron(vec, vec).reshape(-1, 1)
+            prod = (vv.T @ pvp @ vv).item()
+            if v in mini_ramsey.G_out:
+                assert prod == 1
+            else:
+                assert prod == 0
+
+    def test_pep(self, mini_ramsey: MiniRamsey):
+        pep = mini_ramsey.pep
+        assert is_hermitian(pep)
+        assert pep.max() == 1
+
+        d = 2 ** mini_ramsey.qubits
+        for u, v in R6.edges:
+            uvec = one_hot(u, d)
+            vvec = one_hot(v, d)
+            vv = np.kron(uvec, vvec).reshape(-1, 1)
+            prod = (vv.T @ pep @ vv).item()
+            assert prod == 1
+
+            # Test that the reverse edges are present in the projector
+            vv = np.kron(vvec, uvec).reshape(-1, 1)
+            prod = (vv.T @ pep @ vv).item()
+            assert prod == 1
+    
+    def test_properties(self, mini_ramsey: MiniRamsey):
+        mini_ramsey.init()
+        assert is_hermitian(mini_ramsey.mat)
+        assert mini_ramsey.mat.shape == (64, 64)

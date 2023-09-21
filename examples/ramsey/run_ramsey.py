@@ -16,7 +16,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from nonlocalgames import methods, util
-from nonlocalgames.hamiltonians import Ramsey
+from nonlocalgames.hamiltonians import Ramsey, MiniRamsey
 
 gym.logger.set_level(logging.CRITICAL)
 
@@ -53,6 +53,8 @@ def get_cli_args():
 
     parser.add_argument('--layer', default='ry',
                         help='Measurement layer type (see measurement.py)')
+    
+    parser.add_argument('--mini', action='store_true')
 
     args = parser.parse_args()
     return args
@@ -90,7 +92,8 @@ def create_trials(args: argparse.Namespace):
                            adapt_tol=args.adapt_tol,
                            phi_tol=args.phi_tol,
                            theta_tol=args.theta_tol,
-                           layer=args.layer),
+                           layer=args.layer,
+                           mini=args.mini),
         remaining
     ))
 
@@ -162,9 +165,11 @@ class TaskArgs:
     phi_tol: float = 1e-5
     theta_tol: float = 1e-9
     layer: str = 'ry'
+    mini: bool = False
 
     def ham(self):
-        return Ramsey(
+        cls = MiniRamsey if self.mini else Ramsey
+        return cls(
             measurement_layer=self.layer
         )
     
