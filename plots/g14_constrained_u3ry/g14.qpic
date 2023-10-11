@@ -1,0 +1,56 @@
+COLOR neon 0.871 0.898 0.453
+
+# Define our wires
+a0 W |a_0\rangle breadth=40
+a1 W |a_1\rangle breadth=40
+b0 W |b_0\rangle breadth=40
+b1 W |b_1\rangle breadth=40
+
+# Put c_a, c_b at the very end of them with braces
+a0 a1 W >c_a
+b0 b1 W >c_b
+
+# Initial hadamard gates
+a0 H style=rounded_corners=2pt size=20
+a1 H style=rounded_corners=2pt size=20
+b0 H style=rounded_corners=2pt size=20
+b1 H style=rounded_corners=2pt size=20
+
+# Full exponentials from ADAPT
+a0 a1 b0 b1 G $e^{i\frac{\pi}{4}YIZI}$ width=45 style=rounded_corners=10pt fill=cyan!50 breadth=140
+a0 a1 b0 b1 G $e^{-i\frac{\pi}{4}YZYY}$ width=55 style=rounded_corners=10pt fill=cyan!50 breadth=140
+@ 2 color=cyan!50 %% $U(\theta)$
+
+# Add a separation between the ADAPT circuit and the measurement layers
+TOUCH
+a0 OUT \cdots
+a1 OUT \cdots
+b0 OUT \cdots
+b1 OUT \cdots
+
+TOUCH
+# CUT 4
+
+a0 IN \cdots
+a1 IN \cdots
+b0 IN \cdots
+b1 IN \cdots
+
+# Measurement layer
+a0 G $U(\phi_{v_a,0-2})$ width=60 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+a1 G $U(\phi_{v_a,4-6})$ width=60 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+b0 G $U^\dagger(\phi_{v_b,0-2})$ width=60 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+b1 G $U^\dagger(\phi_{v_b,4-6})$ width=60 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+
++a1 a0
++b1 b0
+
+a0 G $R_y(\phi_{v_a,3})$ width=50 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+a1 G $R_y(\phi_{v_a,7})$ width=50 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+b0 G $R_y^\dagger(\phi_{v_b,3})$ width=50 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+b1 G $R_y^\dagger(\phi_{v_b,7})$ width=50 height=20 style=font=\small,rounded_corners=2pt fill=neon!50
+
+@ 3 color=neon %% $U_{iv}(\phi)$
+
+# Final measurements
+a0 a1 b0 b1 M
