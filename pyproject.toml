@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nonlocalgames"
-version = "0.0.1"
+version = "1.0.0"
 authors = [
-  { name="Jim Furches", email="jim.furches@gmail.com" },
+  { name="Jim Furches", email="jfurches@vt.edu" },
 ]
 description = "Algorithms for solving Bell non-local games"
 readme = "README.md"
