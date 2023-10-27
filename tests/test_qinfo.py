@@ -52,7 +52,7 @@ class TestRotations:
 
         assert is_unitary(np.kron(U1, U2))
         assert is_unitary(np.kron(U2, U1))
-
+    
 class TestMeasurement:
     @pytest.mark.parametrize('n', [1,2,3,4,5])
     def test_Miq(self, n, trials=5):

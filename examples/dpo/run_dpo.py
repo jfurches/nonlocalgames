@@ -5,8 +5,8 @@ import json
 
 import numpy as np
 
-import methods
-from hamiltonians import NPartiteSymmetricNLG
+from nonlocalgames import methods
+from nonlocalgames.hamiltonians import NPartiteSymmetricNLG
 
 def get_cli_args():
     parser = argparse.ArgumentParser()
