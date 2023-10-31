@@ -2,7 +2,7 @@
 
 ![Diagram of non-local game](images/nlg_diagram.png)
 
-Code for _Computing Non-Local Game Strategies using Quantum Neural Networks_ ([arXiv:TBD](target:_blank)).
+Code for _Variational Methods for Computing Non-Local Quantum Strategies_ ([arXiv:TBD](target:_blank)).
 
 ### Examples
 
