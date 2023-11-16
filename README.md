@@ -2,7 +2,7 @@
 
 ![Diagram of non-local game](images/nlg_diagram.png)
 
-Code for _Variational Methods for Computing Non-Local Quantum Strategies_ ([arXiv:TBD](target:_blank)).
+Code for _Variational Methods for Computing Non-Local Quantum Strategies_ ([arXiv](https://arxiv.org/abs/2311.01363)).
 
 ### Examples
 
