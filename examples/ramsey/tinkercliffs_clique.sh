@@ -46,7 +46,7 @@ fi
 pip install $ADAPTGYM
 
 # install nonlocalgames package
-pip install ../../
+pip install $REPO_DIR
 
 python run_4clique_trials.py \
     --adapt-tol=1e-2 \
