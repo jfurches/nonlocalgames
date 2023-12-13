@@ -18,16 +18,15 @@ class GraphHomomorphism(NLGHamiltonian):
     players = 2
 
     def __init__(self, G_in: nx.Graph, G_out: nx.Graph, **kwargs):
-        super().__init__(**kwargs)
-
         self.G_in = G_in
         self.G_out = G_out
-        self._pool = PauliPool((2, 3), ops="XYZ")
 
-        self.questions = len(self.G_in)
+        self.questions = len(self.G_in) + 2*len(self.G_in.edges)
         self.qubits = ceil(np.log2(len(self.G_out)))
-
         self._system = self.players * self.qubits
+        super().__init__(**kwargs)
+
+        self._pool = PauliPool((2, 3), ops="XYZ")
 
     def _generate_hamiltonian(self) -> csc_matrix:
         pvp = self.pvp
@@ -46,7 +45,7 @@ class GraphHomomorphism(NLGHamiltonian):
             Uq = self._ml.uq((v2, v1))
             ham += Uq.T.conj() @ pep @ Uq
 
-        Q = len(self.G_in.nodes) + 2 * len(self.G_in.edges)
+        Q = self.questions
         p_q = 1 / Q
         ham *= p_q
         return -ham

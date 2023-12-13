@@ -5,8 +5,6 @@ import json
 import logging
 import os
 import pickle as pkl
-import re
-import shutil
 from dataclasses import asdict, dataclass
 from importlib import resources
 from typing import Any, Dict, Sequence
@@ -89,16 +87,9 @@ def get_cli_args():
 
 
 def load_graphs() -> Dict[str, nx.Graph]:
-    pattern = re.compile(r"graph_4clique_\d+\.nxg")
-    graphs = list(
-        filter(
-            lambda x: pattern.match(x.name),
-            resources.files("nonlocalgames.data").iterdir(),
-        )
-    )
-
+    graphs = list(resources.files("nonlocalgames.data.clique4vertex8").iterdir())
     graph_name = lambda path: os.path.splitext(os.path.basename(path))[0]
-    return {graph_name(path): nx.read_gpickle(path) for path in graphs}
+    return {graph_name(path): nx.read_graph6(path) for path in graphs}
 
 
 def create_trials(args: argparse.Namespace):
