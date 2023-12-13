@@ -87,9 +87,7 @@ class TestState:
 
         # Get ADAPT state. NLGCircuit provided through fixture
         adapt_ansatz, phi = adapt_state
-
-        graph = G14._get_graph()
-        questions = [(v, v) for v in range(13)] + graph.edge_links.tolist()
+        questions = G14.get_questions()
 
         for q in questions:
             adapt_ket = adapt_ansatz.prepare_state()
