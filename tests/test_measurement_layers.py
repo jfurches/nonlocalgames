@@ -49,9 +49,7 @@ class TestMeasurement:
         backend = Aer.get_backend('unitary_simulator')
         qc = transpile(qc, backend)
 
-        vertices = [(v, v) for v in range(14)]
-        edges = G14._get_graph().edge_links.tolist()
-        questions = vertices + edges
+        questions = G14.get_questions()
 
         for q in questions:
             phi = ml.map(q)
