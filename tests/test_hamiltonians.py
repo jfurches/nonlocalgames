@@ -112,21 +112,19 @@ class TestNPS:
 
 class TestG14:
     def test_g14_graph(self):
-        graph = G14._get_graph()
+        G = G14._get_graph()
 
         # Check node values
-        assert graph.nodes.shape[0] == 14
-        assert graph.edge_links.min() == 0
-        assert graph.edge_links.max() == 13
-        assert len(graph.edge_links) == 37 * 2
+        assert len(G) == 14
+        assert len(G.edges) == 37
 
         # Check apex vertex
         for v in range(13):
-            assert (13, v) in graph.edge_links
+            assert (13, v) in G.edges
         
         # Check bidirectional edges
-        for edge in graph.edge_links:
-            assert edge[::-1] in graph.edge_links
+        for edge in G.edges:
+            assert edge[::-1] in G.edges
 
     def test_g14_pcc_no_ancilla(self):
         ham = G14()
