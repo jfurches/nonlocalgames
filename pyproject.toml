@@ -23,6 +23,7 @@ dependencies = [
     "openfermion>=1.5.1",
     "qiskit>=0.43.0",
     "qiskit-ibm-provider>=0.6.0",
+    "qiskit-aer>=0.13.1",
     "adaptgym>=0.0.1",
     "joblib"
 ]
