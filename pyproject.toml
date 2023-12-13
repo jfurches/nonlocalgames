@@ -25,7 +25,8 @@ dependencies = [
     "qiskit>=0.43.0",
     "qiskit-ibm-provider>=0.6.0",
     "ray[rllib]>=2.6.0",
-    "adaptgym>=0.0.1"
+    "adaptgym>=0.0.1",
+    "joblib"
 ]
 
 [project.urls]

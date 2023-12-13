@@ -1,5 +1,8 @@
-from .nlg_hamiltonian import NLGHamiltonian
 from .chsh import CHSHHamiltonian
-from .nps import NPartiteSymmetricNLG
 from .g14 import G14
-from .ramsey import Ramsey, MiniRamsey
+from .graph_homomorphism import GraphHomomorphism
+from .nlg_hamiltonian import NLGHamiltonian
+from .nps import NPartiteSymmetricNLG
+from .ramsey import MiniRamsey, Ramsey
+
+from .quantum_clique import QuantumClique
