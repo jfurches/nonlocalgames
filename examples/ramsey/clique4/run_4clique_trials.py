@@ -5,9 +5,8 @@ import json
 import logging
 import os
 import pickle as pkl
-from dataclasses import asdict, dataclass
 from importlib import resources
-from typing import Any, Dict, Sequence
+from typing import Dict, Sequence
 
 import gymnasium as gym
 import networkx as nx
@@ -16,7 +15,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 from nonlocalgames import methods, util
-from nonlocalgames.hamiltonians import QuantumClique
+from args import TaskArgs, TaskResult
 
 gym.logger.set_level(logging.CRITICAL)
 
@@ -166,7 +165,7 @@ def main(args: argparse.Namespace):
 
     print("Aggregating results")
     df = pd.concat(dataframes, axis=0, ignore_index=True)
-    df.to_csv(f"{DATADIR}/4clique_trials.csv", index=False)
+    df.to_parquet(f"{DATADIR}/4clique_trials.parquet", index=False)
 
     # Cleanup intermediate results directory
     # shutil.rmtree(TMPDIR)
@@ -179,43 +178,6 @@ def load_results_from_dir():
             results.append(pkl.load(f))
 
     return results
-
-
-@dataclass
-class TaskArgs:
-    seed: int
-    graph_name: str
-    graph: nx.Graph
-    dpo_tol: float = 1e-6
-    adapt_tol: float = 1e-3
-    phi_tol: float = 1e-5
-    theta_tol: float = 1e-9
-    layer: str = "ry"
-
-    def ham(self):
-        return QuantumClique(4, self.graph, measurement_layer=self.layer)
-
-    def to_dict(self):
-        return asdict(self)
-
-
-@dataclass
-class TaskResult:
-    df: pd.DataFrame
-    state: Sequence[Any]
-    phi: np.ndarray
-    metrics: dict
-    metadata: TaskArgs
-
-    @property
-    def energy(self):
-        return self.df.energy.min()
-
-    def __hash__(self):
-        return self.metadata.seed + hash(self.metadata.graph_name)
-
-    def __eq__(self, other):
-        return self.metadata.seed == other.metadata.seed
 
 
 def task(args: TaskArgs) -> TaskResult:
