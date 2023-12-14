@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nonlocalgames"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
   { name="Jim Furches", email="jfurches@vt.edu" },
 ]
@@ -18,13 +18,24 @@ classifiers = [
 ]
 
 dependencies = [
-    "gymnasium>=0.26.0",
     "numpy>=1.23.5",
     "scipy>=1.10.0",
     "openfermion>=1.5.1",
     "qiskit>=0.43.0",
+    "pandas",
+    "pytest"
+]
+
+[project.optional-dependencies]
+ibm = [
     "qiskit-ibm-provider>=0.6.0",
-    "ray[rllib]>=2.6.0",
+]
+
+ionq = [
+    "qiskit-ionq>=0.4.4",
+]
+
+adapt = [
     "adaptgym>=0.0.1"
 ]
 
