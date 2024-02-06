@@ -1,0 +1,32 @@
+OPENQASM 2.0;
+include "qelib1.inc";
+gate gate_PauliEvolution(param0) q0,q1,q2,q3 { sdg q0; h q0; cx q2,q0; rz(-1.5707962992125342) q0; cx q2,q0; h q0; s q0; }
+gate gate_PauliEvolution_139787689782112(param0) q0,q1,q2,q3 { sdg q0; h q0; sdg q2; h q2; sdg q3; h q3; cx q3,q2; cx q2,q1; cx q1,q0; rz(1.5707922276356872) q0; cx q1,q0; cx q2,q1; cx q3,q2; h q3; s q3; h q2; s q2; h q0; s q0; }
+qreg a[2];
+qreg b[2];
+creg ca[2];
+creg cb[2];
+reset a[0];
+h a[0];
+reset a[1];
+h a[1];
+reset b[0];
+h b[0];
+reset b[1];
+h b[1];
+gate_PauliEvolution(-0.7853981496062671) a[0],a[1],b[0],b[1];
+gate_PauliEvolution_139787689782112(0.7853961138178436) a[0],a[1],b[0],b[1];
+u(-0.7861306294378217,-1.5713080556529921,0.5339035498705428) a[0];
+u(-0.00015717094124940295,1.3566012919611639,0.6420660448219934) a[1];
+cx a[0],a[1];
+ry(0.7857061341745188) a[0];
+ry(-0.7842572456467424) a[1];
+u(1.5710938316063185,-1.5708641245916248,-0.5334360855486775) b[0];
+u(-2.0690776461007513e-05,-0.5139368065616461,2.4416204213583885) b[1];
+cx b[0],b[1];
+ry(-1.5708162560597627) b[0];
+ry(0.0005879538864963184) b[1];
+measure a[0] -> ca[0];
+measure a[1] -> ca[1];
+measure b[0] -> cb[0];
+measure b[1] -> cb[1];
