@@ -6,30 +6,29 @@
     "configurations": [
         {
             "name": "Python: Current File",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false
         },
         {
-            "name": "Run G14",
-            "type": "python",
+            "name": "Python: GHZ State",
+            "type": "debugpy",
             "request": "launch",
-            "program": "examples/g14/run_g14.py",
-            "args":[
-                // "--weighting=balanced",
-                "--num-cpus=1",
-                "--trials=1",
-                "--seeds=data/seeds.txt",
-                "--constrained",
-                "--adapt-tol=1e-6",
-                "--phi-tol=1e-6",
-                "--dpo-tol=1e-9",
-                "--type=nonviolation"
-            ],
+            "program": "${workspaceFolder}/examples/ghz_state/try_random_seeds.py",
             "console": "integratedTerminal",
-            "justMyCode": true
-        }
+            "justMyCode": true,
+            "env": {
+                // "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=4 --xla_dump_to=${workspaceFolder}/xla_dump",
+                "OPENBLAS_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+                "OMP_NUM_THREAD": "1"
+            },
+            "args": [
+                "-p 2",
+                "-n 2"
+            ]
+        },
     ]
 }

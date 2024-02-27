@@ -2,6 +2,7 @@
 **/*.egg-info
 
 .aws
+.ionq
 data/tmpdata/**
 plots.zip
 *.sh
