@@ -4,15 +4,18 @@ import json
 import multiprocessing as mp
 from collections import OrderedDict
 from dataclasses import dataclass
+from functools import partial
 
 import jax
 import jaxopt
 import networkx as nx
 import numpy as np
 import pennylane as qml
+from jax import numpy as jnp
 from jax import random
 
 jax.config.update("jax_enable_x64", True)
+jax.config.update('jax_platform_name', 'cpu')
 
 n_wires = 4
 dev = qml.device("default.qubit", wires=n_wires)
@@ -65,15 +68,21 @@ def circuit(params: jax.Array, va: int, vb: int):
 
     return qml.expval(Pcc)
 
+@partial(jax.jit, static_argnames=['G'])
 def value(G: nx.Graph, params: jax.Array):
     Q = len(G) + 2 * len(G.edges)
-    val = 0
-    for v in G:
-        val += circuit(params, v, v)
+    val = jax.lax.fori_loop(
+        0, len(G),
+        lambda v, val: val + circuit(params, v, v),
+        0
+    )
 
-    for va, vb in G.edges:
-        val += 1 - circuit(params, va, vb)
-        val += 1 - circuit(params, vb, va)
+    edges = jnp.asarray(list(G.edges()))
+    val = jax.lax.fori_loop(
+        0, edges.shape[0],
+        lambda i, val: val + (2 - circuit(params, *edges[i]) - circuit(params, *edges[i][::-1])),
+        val
+    )
 
     return val / Q
 
