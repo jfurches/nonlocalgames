@@ -1,8 +1,18 @@
 # Non-Local Games
 
-![Diagram of non-local game](images/nlg_diagram.png)
+![G14 strategy circuit](https://github.com/jfurches/nonlocalgames/assets/38408451/633f61dd-b0e0-41e3-b726-aa40c58fb9c6)
 
 Code for _Variational Methods for Computing Non-Local Quantum Strategies_ ([arXiv](https://arxiv.org/abs/2311.01363)).
+
+### Circuits
+
+If you're interested in the strategy circuits for benchmarking hardware or any other applications, they can be found in the `circuits/` folder. There's 3 subfolders:
+
+- `original/`: The original perfect strategy with the large 4-qubit unitary operators.
+- `compressed/`: The same strategy as `original`, except that the state preparation circuit has been greatly reduced to 2 Bell pairs.
+- `ghz/`: An imperfect strategy (V(G) = 0.9921) with the GHZ state shared instead.
+
+Each folder contains an OpenQASM file for each possible question pair, with the filenames taking the form `circuit_{va}_{vb}.qasm`. `va` and `vb` correspond to vertex indices on the G14 graph.
 
 ### Examples
 
