@@ -11,10 +11,11 @@ from qiskit_aer import Aer
 
 from nonlocalgames.measurement import MeasurementLayer
 from nonlocalgames.qinfo import is_unitary
-from nonlocalgames.hamiltonians import G14
+from nonlocalgames.games import G14
+
 
 class TestMeasurement:
-    @pytest.mark.parametrize('layer', ('ry', 'cnotry', 'u3', 'u10', 'u3ry'))
+    @pytest.mark.parametrize("layer", ("ry", "cnotry", "u3", "u10", "u3ry"))
     def test_layers(self, layer):
         ml = MeasurementLayer.get(layer, 2, 14, 2)
         ml.phi[:] = np.random.normal(size=ml.phi.shape)
@@ -25,28 +26,30 @@ class TestMeasurement:
 
     def test_u10_g14(self):
         path = (
-            Path(__file__).parent.parent.resolve() 
-            / 'data' / 'g14_constrained_u10' / 'g14_state.json'
+            Path(__file__).parent.parent.resolve()
+            / "data"
+            / "g14_constrained_u10"
+            / "g14_state.json"
         )
 
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        
-        phi = np.array(data['phi'])
+
+        phi = np.array(data["phi"])
         assert phi.shape == (1, 14, 2, 5)
         phi = np.concatenate([phi, phi], axis=0)
-        ml = MeasurementLayer.get('u10', phi=phi)
+        ml = MeasurementLayer.get("u10", phi=phi)
         ml.conj(1)
 
         # Make dummy circuit
-        qc = QuantumCircuit(QuantumRegister(2), QuantumRegister(2), name='q')
-        params = ParameterVector('p', 20)
+        qc = QuantumCircuit(QuantumRegister(2), QuantumRegister(2), name="q")
+        params = ParameterVector("p", 20)
         for i, qreg in enumerate(qc.qregs):
             ml.add(i, qc, qreg, params)
-        
+
         # Reverse bits to be compatible with our ordering
         # qc = qc.reverse_bits()
-        backend = Aer.get_backend('unitary_simulator')
+        backend = Aer.get_backend("unitary_simulator")
         qc = transpile(qc, backend)
 
         questions = G14.get_questions()
