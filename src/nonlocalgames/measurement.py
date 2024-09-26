@@ -5,35 +5,35 @@ from typing import Tuple, Callable
 
 import numpy as np
 
-from nonlocalgames.qinfo import np
-
 with warnings.catch_warnings():
-    warnings.filterwarnings(action='ignore', category=DeprecationWarning)
-    from qiskit import (
-        QuantumCircuit,
-        QuantumRegister
-    )
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning)
+    from qiskit import QuantumCircuit, QuantumRegister
     from qiskit.circuit import ParameterVector
 
 from .qinfo import *
 
+
 class LayerRegistry:
     layers = {}
+
 
 def register(*names, requires_type=False):
     def decorator(cls):
         if not isinstance(cls, type):
-            raise TypeError('Decorator only works on classes')
-    
+            raise TypeError("Decorator only works on classes")
+
         for name in names:
             LayerRegistry.layers[name] = (cls, requires_type)
         return cls
+
     return decorator
+
 
 @dataclass
 class MeasurementLayer(ABC):
-    '''Utility class for constructing measurement layers and mapping
-    the phi tensors to circuit parameters'''
+    """Utility class for constructing measurement layers and mapping
+    the phi tensors to circuit parameters"""
+
     players: int
     questions: int
     qubits: int
@@ -44,85 +44,92 @@ class MeasurementLayer(ABC):
         # phi has shape (players, question, qubits, params per qubit)
         assert self.phi.ndim == 4
         players, qubits, params_per_qubit = (
-            self.phi.shape[0], self.phi.shape[-2], self.phi.shape[-1]
+            self.phi.shape[0],
+            self.phi.shape[-2],
+            self.phi.shape[-1],
         )
 
         return players * qubits * params_per_qubit
-    
+
     @abstractmethod
-    def add(self, i: int, qc: QuantumCircuit, qreg: QuantumRegister, phi: ParameterVector):
-        '''Adds the appropriate gates and parameters to the circuit
-        
+    def add(
+        self, i: int, qc: QuantumCircuit, qreg: QuantumRegister, phi: ParameterVector
+    ):
+        """Adds the appropriate gates and parameters to the circuit
+
         Args:
             i: Index of the player's qreg
             qc: The quantum circuit
             qreg: The qubit register of player i
             phi: The full parameter vector object
-        '''
+        """
         ...
 
     def map(self, q: tuple) -> np.ndarray:
-        '''Returns the parameter vector based on question q = (q1, ..., qn) that
-        maps to the ParameterVector phi'''
+        """Returns the parameter vector based on question q = (q1, ..., qn) that
+        maps to the ParameterVector phi"""
 
         phi = np.concatenate([self.phi[i, qi].ravel() for i, qi in enumerate(q)])
         return phi
-    
+
     def uq(self, q: Tuple[int]) -> Tuple[np.ndarray]:
         ops = tuple(map(lambda a: self.to_unitary(*a), enumerate(q)))
         return tensor(ops, tuple(range(self.players)), self.players)
-    
+
     @abstractmethod
-    def to_unitary(self, i: int, qi: int) -> np.ndarray:
-        ...
+    def to_unitary(self, i: int, qi: int) -> np.ndarray: ...
 
     @staticmethod
-    def get(type_: str,
-            players: int = None,
-            questions = None,
-            qubits = None,
-            phi: np.ndarray = None) -> "MeasurementLayer":
+    def get(
+        type_: str,
+        players: int = None,
+        questions=None,
+        qubits=None,
+        phi: np.ndarray = None,
+    ) -> "MeasurementLayer":
 
         if phi is not None:
             players, questions, qubits = phi.shape[:3]
-        
+
         # requires_type is used by singlequbitlayer to distinguish ry and u3
         cls, requires_type = LayerRegistry.layers[type_.lower()]
-        kwargs = {'phi': phi}
+        kwargs = {"phi": phi}
         if requires_type:
-            kwargs['type'] = type_.lower()
+            kwargs["type"] = type_.lower()
 
         return cls(players, questions, qubits, **kwargs)
-    
+
     @property
     def params(self):
         return self.phi
-    
+
     @params.setter
     def params(self, v: np.ndarray):
         self.phi[:] = v.reshape(self.phi.shape)
-    
+
     @property
     def shape(self):
         return self.phi.shape
 
     def conj(self, i: int):
+        """Conjugates the parameters of the ith player"""
         pass
 
-@register('ry', 'u3', requires_type=True)
+
+@register("ry", "u3", requires_type=True)
 @dataclass
 class SingleQubitLayer(MeasurementLayer):
-    type: str = 'ry'
+    type: str = "ry"
     ufunc: Callable = field(default=None, init=False)
 
     def __post_init__(self):
-        if self.type == 'ry':
+        if self.type == "ry":
             self.ufunc = Ry
             params_per_qubit = 1
-        elif self.type == 'u3':
+        elif self.type == "u3":
             self.ufunc = U3
             params_per_qubit = 3
-        
+
         # Initialize the parameters if not given
         if self.phi is None:
             shape = (self.players, self.questions, self.qubits, params_per_qubit)
@@ -134,24 +141,24 @@ class SingleQubitLayer(MeasurementLayer):
         n = self.phi.shape[-1]
         # Iterate over qubits in each register
         for j, qubit in enumerate(qreg):
-            idx = i*stride + j*n
-            if self.type == 'ry':
+            idx = i * stride + j * n
+            if self.type == "ry":
                 # Add y rotations that the players choose based on
                 # the question they receive
                 qc.ry(phi[idx], qubit)
-            elif self.type == 'u3':
-                qc.u(*phi[idx:idx+n], qubit)
-    
+            elif self.type == "u3":
+                qc.u(*phi[idx : idx + n], qubit)
+
     def to_unitary(self, i: int, qi: int):
-        ops = [self.ufunc(*self.phi[i, qi, qubit])
-               for qubit in range(self.qubits)]
+        ops = [self.ufunc(*self.phi[i, qi, qubit]) for qubit in range(self.qubits)]
         return tensor(ops, list(range(self.qubits)), self.qubits)
-    
+
     def conj(self, i: int):
-        if self.type == 'u3':
+        if self.type == "u3":
             self.phi[i, ..., 1:] = -self.phi[i, ..., 1:]
 
-@register('cnotry')
+
+@register("cnotry")
 @dataclass
 class CnotRyLayer(MeasurementLayer):
     def __post_init__(self):
@@ -173,19 +180,16 @@ class CnotRyLayer(MeasurementLayer):
         qc.cx(qreg[0], qreg[1])
         qc.ry(phi[idx + 1], qreg[0])
         qc.ry(phi[idx + 3], qreg[1])
-    
+
     def to_unitary(self, i: int, qi: int):
         # This specifically has 2 qubits
-        U1 = np.kron(
-            Ry(self.phi[i, qi, 0, 0]),
-            Ry(self.phi[i, qi, 1, 0]))
-        U2 = np.kron(
-            Ry(self.phi[i, qi, 0, 1]),
-            Ry(self.phi[i, qi, 1, 1]))
+        U1 = np.kron(Ry(self.phi[i, qi, 0, 0]), Ry(self.phi[i, qi, 1, 0]))
+        U2 = np.kron(Ry(self.phi[i, qi, 0, 1]), Ry(self.phi[i, qi, 1, 1]))
         U = U2 @ cnot01 @ U1
         return U
 
-@register('u10')
+
+@register("u10")
 @dataclass
 class U10Layer(MeasurementLayer):
     def __post_init__(self):
@@ -201,23 +205,20 @@ class U10Layer(MeasurementLayer):
         stride = self.phi.shape[-2] * self.phi.shape[-1]
         idx = i * stride
 
-        qc.u(*phi[idx:idx+3], qreg[0])
-        qc.u(*phi[idx+5:idx+8], qreg[1])
+        qc.u(*phi[idx : idx + 3], qreg[0])
+        qc.u(*phi[idx + 5 : idx + 8], qreg[1])
 
         qc.cx(qreg[0], qreg[1])
 
-        qc.rz(phi[idx+4], qreg[0])
-        qc.rx(phi[idx+3], qreg[0])
+        qc.rz(phi[idx + 4], qreg[0])
+        qc.rx(phi[idx + 3], qreg[0])
 
-        qc.rx(phi[idx+9], qreg[1])
-        qc.rz(phi[idx+8], qreg[1])
+        qc.rx(phi[idx + 9], qreg[1])
+        qc.rz(phi[idx + 8], qreg[1])
 
     def to_unitary(self, i: int, qi: int):
         # This also has 2 qubits
-        U1 = np.kron(
-            U3(*self.phi[i, qi, 0, 0:3]),
-            U3(*self.phi[i, qi, 1, 0:3])
-        )
+        U1 = np.kron(U3(*self.phi[i, qi, 0, 0:3]), U3(*self.phi[i, qi, 1, 0:3]))
         # Todo: Flip the Rx and Rz gates
         U2 = np.kron(
             Rx(self.phi[i, qi, 0, 3]) @ Rz(self.phi[i, qi, 0, 4]),
@@ -229,7 +230,8 @@ class U10Layer(MeasurementLayer):
     def conj(self, i: int):
         self.phi[i, ..., 1:] = -self.phi[i, ..., 1:]
 
-@register('u3ry')
+
+@register("u3ry")
 @dataclass
 class U3Ry(MeasurementLayer):
     def __post_init__(self):
@@ -237,33 +239,27 @@ class U3Ry(MeasurementLayer):
         if self.phi is None:
             shape = (self.players, self.questions, self.qubits, 4)
             self.phi = np.zeros(shape, dtype=float)
-    
+
     def add(self, i, qc, qreg, phi):
         assert len(qreg) == 2
 
         stride = self.phi.shape[-2] * self.phi.shape[-1]
         idx = i * stride
 
-        qc.u(*phi[idx:idx+3], qreg[0])
-        qc.u(*phi[idx+4:idx+7], qreg[1])
+        qc.u(*phi[idx : idx + 3], qreg[0])
+        qc.u(*phi[idx + 4 : idx + 7], qreg[1])
 
         qc.cx(qreg[0], qreg[1])
 
-        qc.ry(phi[idx+3], qreg[0])
-        qc.ry(phi[idx+7], qreg[1])
-    
-    def to_unitary(self, i: int, qi: int):
-        U3_layer = np.kron(
-            U3(*self.phi[i, qi, 0, 0:3]),
-            U3(*self.phi[i, qi, 1, 0:3])
-        )
+        qc.ry(phi[idx + 3], qreg[0])
+        qc.ry(phi[idx + 7], qreg[1])
 
-        Ry_layer = np.kron(
-            Ry(self.phi[i, qi, 0, 3]),
-            Ry(self.phi[i, qi, 1, 3])
-        )
+    def to_unitary(self, i: int, qi: int):
+        U3_layer = np.kron(U3(*self.phi[i, qi, 0, 0:3]), U3(*self.phi[i, qi, 1, 0:3]))
+
+        Ry_layer = np.kron(Ry(self.phi[i, qi, 0, 3]), Ry(self.phi[i, qi, 1, 3]))
 
         return Ry_layer @ cnot01 @ U3_layer
-    
+
     def conj(self, i: int):
         self.phi[i, ..., 1:3] = -self.phi[i, ..., 1:3]
