@@ -9,7 +9,7 @@ Code for _Variational Methods for Computing Non-Local Quantum Strategies_ ([arXi
 If you're interested in the strategy circuits for benchmarking hardware or any other applications, they can be found in the `circuits/` folder. There's 3 subfolders:
 
 - `4q/`: The original perfect strategy with the large 4-qubit unitary operators.
-- `bell_pair/`: The same strategy as `original`, except that the state preparation circuit has been greatly reduced to 2 Bell pairs.
+- `bell_pair/`: The same strategy as `4q`, except that the state preparation circuit has been greatly reduced to 2 Bell pairs.
 - `ghz/`: **(Don't use this one)** ~~An imperfect strategy (V(G) = 0.9921) with the GHZ state shared instead.~~
 
 Each folder contains an OpenQASM file for each possible question pair, with the filenames taking the form `circuit_{va}_{vb}.qasm`. `va` and `vb` correspond to vertex indices on the G14 graph.
