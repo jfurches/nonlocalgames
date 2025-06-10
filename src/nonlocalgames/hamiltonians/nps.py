@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from adaptgym.pools import AllPauliPool
+from adapt_gym.pools import AllPauliPool
 
 from .nlg_hamiltonian import NLGHamiltonian
 from ..qinfo import *

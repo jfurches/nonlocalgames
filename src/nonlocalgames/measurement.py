@@ -72,7 +72,7 @@ class MeasurementLayer(ABC):
         phi = np.concatenate([self.phi[i, qi].ravel() for i, qi in enumerate(q)])
         return phi
 
-    def uq(self, q: Tuple[int]) -> Tuple[np.ndarray]:
+    def uq(self, q: Tuple[int, ...]) -> Tuple[np.ndarray]:
         ops = tuple(map(lambda a: self.to_unitary(*a), enumerate(q)))
         return tensor(ops, tuple(range(self.players)), self.players)
 

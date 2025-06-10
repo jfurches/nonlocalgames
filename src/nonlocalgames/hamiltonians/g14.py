@@ -5,13 +5,12 @@ from typing import List, Tuple
 
 import networkx as nx
 import numpy as np
-from adaptgym.pools import AllPauliPool
+from adapt_gym.pools import AllPauliPool
 from qiskit.quantum_info import Statevector
 from scipy.sparse import csc_matrix
 
 from ..qinfo import *
 from .nlg_hamiltonian import NLGHamiltonian
-
 
 class G14(NLGHamiltonian):
     """Hamiltonian encoding G14 non-local game from [1].
@@ -224,8 +223,8 @@ class G14(NLGHamiltonian):
     @staticmethod
     def _get_graph() -> nx.Graph:
         """Returns the G14 graph"""
-        g14_file = resources.files("nonlocalgames.data").joinpath("g14.g6")
-        return nx.read_graph6(g14_file)
+        g14_file = resources.files("nonlocalgames.data").joinpath("g14.nx")
+        return nx.read_edgelist(g14_file, nodetype=int)
 
     @staticmethod
     def get_questions() -> List[Tuple[int, int]]:

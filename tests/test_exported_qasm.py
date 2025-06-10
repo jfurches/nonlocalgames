@@ -1,8 +1,10 @@
 from pathlib import Path
+from importlib import resources
 
 import re
 import numpy as np
 import pytest
+import networkx as nx
 import qiskit as qk
 from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime import SamplerV2 as Sampler, SamplerOptions
@@ -17,7 +19,30 @@ class TestQiskit:
 
 class TestCircuits:
     @pytest.mark.parametrize("strategy", ["4q", "bell_pair"])
-    def test_exported_circuits(self, strategy: str):
+    def test_queries_match_graph(self, strategy: str):
+        """Checks that each circuit file is in the proper graph definition"""
+
+        path = resources.files("nonlocalgames.data").joinpath("g14.nx")
+        G = nx.read_edgelist(path, nodetype=int)
+
+        pattern = re.compile(r".*_(\d+)_(\d+).qasm")
+        folder = Path(__file__).parent.parent / "circuits" / strategy
+        for file in folder.glob("*.qasm"):
+            match = pattern.match(file.name)
+            if not match:
+                continue
+
+            va = int(match.group(1))
+            vb = int(match.group(2))
+            is_vertex = va == vb
+
+            if is_vertex:
+                assert va in G
+            else:
+                assert (va, vb) in G.edges
+
+    @pytest.mark.parametrize("strategy", ["4q", "bell_pair"])
+    def test_perfect_winrate(self, strategy: str):
         """Tests that the exported circuits reproduce perfect win rates"""
 
         backend = AerSimulator(method="statevector")

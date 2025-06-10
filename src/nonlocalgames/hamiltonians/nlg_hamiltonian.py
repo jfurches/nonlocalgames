@@ -4,11 +4,10 @@ from abc import abstractmethod
 
 import numpy as np
 from scipy.sparse import csc_matrix
-from adaptgym.hamiltonians import Hamiltonian
-from adaptgym.pools import OperatorPool
+from adapt_gym.hamiltonians import Hamiltonian
+from adapt_gym.pools import OperatorPool
 
 from ..measurement import MeasurementLayer
-
 
 class NLGHamiltonian(Hamiltonian):
     '''Base class for hamiltonians of non-local games, which

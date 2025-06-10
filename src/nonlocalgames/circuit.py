@@ -13,17 +13,16 @@ import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
     from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
-    from qiskit.extensions import Initialize
     from qiskit.quantum_info import Pauli
     from qiskit.circuit import ParameterVector, Parameter
-    from qiskit.circuit.library import PauliEvolutionGate
+    from qiskit.circuit.library import PauliEvolutionGate, Initialize
     from qiskit.providers import Backend, JobV1
     from qiskit.providers.exceptions import JobTimeoutError
     from qiskit.result import Result
     from qiskit_aer import AerSimulator, AerJob
     from qiskit_aer.library import SaveStatevector
 
-from openfermion import QubitOperator
+from openfermion.ops.operators.qubit_operator import QubitOperator
 from . import util
 from .measurement import MeasurementLayer
 

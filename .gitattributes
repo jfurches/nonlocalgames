@@ -1,2 +1,3 @@
 # Ignore jupyter notebooks in programming language count
 *.ipynb -linguist-detectable
+* text=auto

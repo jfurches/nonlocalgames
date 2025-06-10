@@ -9,12 +9,12 @@ import pytest
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(action='ignore', category=DeprecationWarning)
-    from qiskit import Aer
+    from qiskit_aer import AerSimulator
     from qiskit.quantum_info import Statevector
 
 import openfermion as of
 import numpy as np
-from adaptgym import AdaptiveAnsatz
+from adapt_gym import AdaptiveAnsatz
 
 from nonlocalgames.circuit import (
     NLGCircuit,
@@ -27,7 +27,7 @@ from nonlocalgames.qinfo import Ry, tensor
 @pytest.fixture(scope='session')
 def sim():
     '''Fixture to create qiskit backend'''
-    return Aer.get_backend('aer_simulator_statevector')
+    return AerSimulator(method="statevector")
 
 @pytest.fixture(scope='session')
 def saved_state():
@@ -60,7 +60,7 @@ def adapt_state(saved_state):
         op = qubitop_from_str(gate_str)
         sp_op = of.get_sparse_operator(op, n_qubits=qubits)
 
-        ansatz._curr_params.append(theta)
+        ansatz.curr_params.append(theta)
         ansatz.G.append(sp_op)
         ansatz.is_qubit_op.append(True)
     
@@ -138,7 +138,7 @@ class TestState:
             assert np.isclose(p_win, 1)
 
 T = TypeVar('T')
-def dict_allclose(d1: Dict[T, float], d2: Dict[T, float]) -> bool:
+def dict_allclose(d1: Dict[T, float], d2: Dict[T, float]):
     assert d1.keys() == d2.keys()
 
     for k in d1.keys():

@@ -7,14 +7,14 @@ import numpy as np
 from scipy.optimize import minimize, OptimizeResult
 from scipy.optimize._optimize import _prepare_scalar_function
 from scipy.sparse import csc_matrix, linalg
-from openfermion import SymbolicOperator
+from openfermion.ops.operators.symbolic_operator import SymbolicOperator
 
 from qiskit.quantum_info import (
     Statevector,
     mutual_information as qiskit_mi
 )
 
-from adaptgym import AdaptGame
+from adapt_gym import AdaptGame
 
 from nonlocalgames.hamiltonians import NLGHamiltonian
 
@@ -114,10 +114,10 @@ def dual_phase_optim(
                     print(info['optim_message'])
                 print('Added gate',
                       ham.pool.get_operators()[shared_state.pool_idx[0]],
-                      shared_state.params[0])
+                      shared_state.curr_params[0])
                 print()
 
-        theta = shared_state.params
+        theta = shared_state.curr_params
         metrics.setdefault('adapt_pool_gradmax', [0]).append(info['grad_max'])
 
         if verbose >= 2:
@@ -194,7 +194,7 @@ def dual_phase_optim(
 
     # Optimization finished, save ansatz in a serialized manner
     ansatz_obj: List[Tuple[float, SymbolicOperator]] = []
-    for pool_idx, theta in zip(shared_state.pool_idx, shared_state.params):
+    for pool_idx, theta in zip(shared_state.pool_idx, shared_state.curr_params):
         gate = ham.pool.get_operators()[pool_idx]
         ansatz_obj.append((theta, str(gate)))
 

@@ -1,31 +1,31 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "nonlocalgames"
 version = "1.0.0"
 authors = [
-  { name="Jim Furches", email="jfurches@vt.edu" },
+  { name="Jim Furches", email="jim.furches@gmail.com" },
 ]
-description = "Algorithms for solving Bell non-local games"
+description = "Algorithms for solving non-local games"
 readme = "README.md"
-requires-python = ">=3.10"
-license = {file = "LICENSE"}
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-]
-
+requires-python = ">=3.12"
 dependencies = [
-    # "gymnasium>=0.26.0",
-    "numpy>=1.23.5",
-    "scipy>=1.10.0",
-    "openfermion>=1.5.1",
-    "qiskit>=0.43.0",
-    "qiskit-ibm-provider>=0.6.0",
-    # "adaptgym>=0.0.1"
+    "adapt-gym",
+    "numpy>=2.3.0",
+    "openfermion>=1.7.1",
+    "qiskit>=2.0.2",
+    "qiskit-aer>=0.17.1",
+    "qiskit-ibm-provider>=0.11.0",
+    "qiskit-ibm-runtime>=0.40.1",
+    "scipy>=1.15.3",
 ]
 
-[project.urls]
-repository = "https://github.com/jfurches/nonlocalgames"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+adapt-gym = { path = "../adapt-gym", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+]

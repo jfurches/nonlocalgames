@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from adaptgym.pools import PauliPool
+from adapt_gym.pools import PauliPool
 
 from .nlg_hamiltonian import NLGHamiltonian
 from ..qinfo import *
@@ -20,7 +20,7 @@ class CHSHHamiltonian(NLGHamiltonian):
 
         assert self._param_init_mode in ('optimal', 'normal', None)
 
-        self._pool = PauliPool(lengths=(2,))
+        self._pool: PauliPool = PauliPool(lengths=(2,))
 
     def _init_pool(self):
         self._pool.init(qubits=2)

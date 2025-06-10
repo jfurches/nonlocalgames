@@ -7,7 +7,7 @@ import numpy as np
 
 from qiskit import QuantumCircuit, transpile, QuantumRegister
 from qiskit.circuit import ParameterVector
-from qiskit_aer import Aer
+from qiskit_aer import AerSimulator
 
 from nonlocalgames.measurement import MeasurementLayer
 from nonlocalgames.qinfo import is_unitary
@@ -46,17 +46,18 @@ class TestMeasurement:
         params = ParameterVector("p", 20)
         for i, qreg in enumerate(qc.qregs):
             ml.add(i, qc, qreg, params)
+        qc.save_unitary()
 
         # Reverse bits to be compatible with our ordering
-        # qc = qc.reverse_bits()
-        backend = Aer.get_backend("unitary_simulator")
+        qc = qc.reverse_bits()
+        backend = AerSimulator(method="unitary")
         qc = transpile(qc, backend)
 
         questions = G14.get_questions()
 
         for q in questions:
             phi = ml.map(q)
-            qc_test = qc.bind_parameters({params: phi})
+            qc_test = qc.assign_parameters({params: phi})
             job = backend.run(qc_test, shots=8192)
             result = job.result()
             qiskit_unitary = result.get_unitary()
