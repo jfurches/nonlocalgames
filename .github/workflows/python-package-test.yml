@@ -19,6 +19,10 @@ jobs:
       with:
         python-version-file: ".python-version"
 
+    - name: Install dependencies (no adapt-gym)
+      run: |
+        uv sync --group dev
+
     - name: Test with pytest
       run: |
         uv run pytest tests/test_exported_qasm.py
