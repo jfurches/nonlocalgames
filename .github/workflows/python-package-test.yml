@@ -21,8 +21,8 @@ jobs:
 
     - name: Install dependencies (no adapt-gym)
       run: |
-        uv sync --group dev
+        uv sync --frozen --group dev
 
     - name: Test with pytest
       run: |
-        uv run pytest tests/test_exported_qasm.py
+        uv run --frozen pytest tests/test_exported_qasm.py
