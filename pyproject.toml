@@ -8,7 +8,6 @@ description = "Algorithms for solving non-local games"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "adapt-gym",
     "numpy>=2.3.0",
     "openfermion>=1.7.1",
     "qiskit>=2.0.2",
@@ -18,14 +17,20 @@ dependencies = [
     "scipy>=1.15.3",
 ]
 
+[project.optional-dependencies]
+adapt = [
+    "adapt-gym",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv.sources]
-adapt-gym = { path = "../adapt-gym", editable = true }
-
 [dependency-groups]
 dev = [
+    "black>=25.1.0",
     "pytest>=8.4.0",
 ]
+
+[tool.uv.sources]
+adapt-gym = { path = "../adapt-gym", editable = true }

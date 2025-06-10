@@ -8,9 +8,10 @@ from adapt_gym.pools import PauliPool
 from .nlg_hamiltonian import NLGHamiltonian
 from ..qinfo import *
 
+
 class CHSHHamiltonian(NLGHamiltonian):
-    optimal_params: np.ndarray = np.array([0, -np.pi/2, -np.pi/4, np.pi/4])
-    
+    optimal_params: np.ndarray = np.array([0, -np.pi / 2, -np.pi / 4, np.pi / 4])
+
     players = 2
     questions = 2
     qubits = 1
@@ -18,7 +19,7 @@ class CHSHHamiltonian(NLGHamiltonian):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        assert self._param_init_mode in ('optimal', 'normal', None)
+        assert self._param_init_mode in ("optimal", "normal", None)
 
         self._pool: PauliPool = PauliPool(lengths=(2,))
 
@@ -28,7 +29,7 @@ class CHSHHamiltonian(NLGHamiltonian):
         self._pool.generate_sparse_ops()
 
     def _generate_hamiltonian(self):
-        if self._param_init_mode == 'optimal':
+        if self._param_init_mode == "optimal":
             self._params[:] = self.optimal_params.reshape(self.desired_shape)
 
         ZZ = np.kron(Z, Z)

@@ -1,4 +1,4 @@
 try:
-    from . import envs, hamiltonians, methods, qinfo
+    from . import hamiltonians, methods, qinfo
 except ImportError or ModuleNotFoundError:
     pass

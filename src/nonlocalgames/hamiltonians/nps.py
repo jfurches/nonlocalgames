@@ -8,6 +8,7 @@ from adapt_gym.pools import AllPauliPool
 from .nlg_hamiltonian import NLGHamiltonian
 from ..qinfo import *
 
+
 class NPartiteSymmetricNLG(NLGHamiltonian):
     questions = 2
     qubits = 1
@@ -21,7 +22,7 @@ class NPartiteSymmetricNLG(NLGHamiltonian):
 
     def _generate_hamiltonian(self) -> csc_matrix:
         N = self.players
-        d = 2 ** N
+        d = 2**N
 
         def M(i, q):
             Uqi = self._ml.to_unitary(i, q)
@@ -29,11 +30,11 @@ class NPartiteSymmetricNLG(NLGHamiltonian):
             return tensor_i(A, i, N)
 
         # Initialize each of these terms to 0
-        s0 = csc_matrix((d,d), dtype=complex)
-        s01 = csc_matrix((d,d), dtype=complex)
+        s0 = csc_matrix((d, d), dtype=complex)
+        s01 = csc_matrix((d, d), dtype=complex)
         # These two terms will technically be 1/2 their value in the paper
-        s00 = csc_matrix((d,d), dtype=complex)
-        s11 = csc_matrix((d,d), dtype=complex)
+        s00 = csc_matrix((d, d), dtype=complex)
+        s11 = csc_matrix((d, d), dtype=complex)
 
         # one-body terms
         for i in range(N):
@@ -60,13 +61,13 @@ class NPartiteSymmetricNLG(NLGHamiltonian):
 
     @property
     def ref_ket(self):
-        d = 2 ** self.players
+        d = 2**self.players
         # Equal superposition state
         ket = csc_matrix(np.full((d, 1), 1 / np.sqrt(d)), dtype=complex)
         # ket[0, 0] = 1 # |00...> state
 
         return ket
-    
+
     def gradient(self, state: np.ndarray, phi: np.ndarray | None = None) -> np.ndarray:
         phi = self._params if phi is None else phi
         output_shape = phi.shape
@@ -79,13 +80,10 @@ class NPartiteSymmetricNLG(NLGHamiltonian):
             # product
             A = Ry(-phi[i, q]) @ Z @ Ry(phi[i, q])
             return A
-        
+
         # Pre-compute all the measurement operators, which we can index with
         # M_[i][q]
-        M_ = [
-            [M(j, q) for q in (0, 1)]
-            for j in range(self.N)
-        ]
+        M_ = [[M(j, q) for q in (0, 1)] for j in range(self.N)]
 
         # Compute the full 2-body operator Delta0
         A = [M_[j][0] - M_[j][1] for j in range(self.N)]
@@ -97,23 +95,23 @@ class NPartiteSymmetricNLG(NLGHamiltonian):
             # depend on q except for the (-1)^q factor
             term = M_[i][0] - M_[i][1]
             Deltai0 = tensor_i(term, i, self.N)
-            two_body_op = (Delta0 - Deltai0)
+            two_body_op = Delta0 - Deltai0
 
             for q in (0, 1):
                 # Compute partial operator, we use -i since our convention for
                 # Ry in qinfo.py is exp(-itY/2)
-                term = -1j/2 * (M_[i][q] @ Y)
+                term = -1j / 2 * (M_[i][q] @ Y)
                 partial_iq = tensor_i(term, i, self.N)
 
                 # Expectation of two body operator
                 term = (state.T.conj() @ partial_iq) @ (two_body_op @ state)
                 assert term.size == 1
-                grad[i,q] += (-1) ** q * (term.item().real)
+                grad[i, q] += (-1) ** q * (term.item().real)
 
                 # Add in the single-body term
                 if q == 0:
                     term = state.T.conj() @ partial_iq @ state
                     assert term.size == 1
-                    grad[i,q] += -4 * term.item().real
-            
+                    grad[i, q] += -4 * term.item().real
+
         return grad.reshape(output_shape)

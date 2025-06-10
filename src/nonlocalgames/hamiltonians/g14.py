@@ -12,6 +12,7 @@ from scipy.sparse import csc_matrix
 from ..qinfo import *
 from .nlg_hamiltonian import NLGHamiltonian
 
+
 class G14(NLGHamiltonian):
     """Hamiltonian encoding G14 non-local game from [1].
 
