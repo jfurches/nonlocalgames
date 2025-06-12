@@ -1,0 +1,11 @@
+**/__pycache__/
+**/*.egg-info
+**/data/
+**/.github/
+**/.vscode/
+**/examples/
+**/images/
+**/tests/
+**/*.ipynb
+**/.venv/
+**/.git/

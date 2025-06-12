@@ -6,3 +6,4 @@
 data/tmpdata/**
 plots.zip
 *.sh
+.ipynb_checkpoints/
